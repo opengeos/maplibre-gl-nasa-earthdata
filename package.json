@@ -72,7 +72,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/giswqs/maplibre-gl-nasa-earthdata.git"
+    "url": "https://github.com/opengeos/maplibre-gl-nasa-earthdata.git"
   },
   "peerDependencies": {
     "maplibre-gl": ">=3.0.0",

@@ -257,7 +257,7 @@ Then add `http://localhost:8000/plugin.json` in GeoLibre Settings > Plugins.
 
 ```bash
 # Clone the repository
-git clone https://github.com/giswqs/maplibre-gl-nasa-earthdata.git
+git clone https://github.com/opengeos/maplibre-gl-nasa-earthdata.git
 cd maplibre-gl-nasa-earthdata
 
 # Install dependencies
@@ -315,10 +315,10 @@ The examples can be run using Docker. The image is automatically built and publi
 
 ```bash
 # Pull the latest image
-docker pull ghcr.io/giswqs/maplibre-gl-nasa-earthdata:latest
+docker pull ghcr.io/opengeos/maplibre-gl-nasa-earthdata:latest
 
 # Run the container
-docker run -p 8080:80 ghcr.io/giswqs/maplibre-gl-nasa-earthdata:latest
+docker run -p 8080:80 ghcr.io/opengeos/maplibre-gl-nasa-earthdata:latest
 ```
 
 Then open http://localhost:8080/maplibre-gl-nasa-earthdata/ in your browser to view the examples.
