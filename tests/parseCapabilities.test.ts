@@ -15,6 +15,10 @@ describe('parseCapabilities', () => {
     const { layers } = parseCapabilities(xml, { includeVector: true });
     expect(layers.map((l) => l.id)).toContain('Test_Thermal_Anomalies');
     expect(layers).toHaveLength(3);
+    // Mixed-format layers still resolve to raster (png) when vector is enabled
+    const temp = layers.find((l) => l.id === 'Test_Air_Temperature_Monthly')!;
+    expect(temp.format).toBe('png');
+    expect(temp.resourceTemplate).toMatch(/\.png$/i);
   });
 
   it('always skips layers without a tile ResourceURL', () => {
