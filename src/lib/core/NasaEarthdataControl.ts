@@ -230,6 +230,7 @@ export class NasaEarthdataControl implements IControl {
       this._renderResults();
     }
 
+    let deferStateEmit = false;
     if (newState.addedLayers) {
       // Reconciliation needs the layer catalog; defer it until the
       // capabilities are loaded so state restoration works before the
@@ -238,6 +239,9 @@ export class NasaEarthdataControl implements IControl {
       if (this._capabilities) {
         this._reconcileAddedLayers(desired);
       } else {
+        // Emit statechange only after reconciliation so listeners never
+        // see a stale addedLayers snapshot.
+        deferStateEmit = true;
         void this.getCapabilities()
           .then(() => {
             this._reconcileAddedLayers(desired);
@@ -252,7 +256,9 @@ export class NasaEarthdataControl implements IControl {
       }
     }
 
-    this._emit("statechange");
+    if (!deferStateEmit) {
+      this._emit("statechange");
+    }
   }
 
   /**
