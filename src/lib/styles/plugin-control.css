@@ -81,8 +81,8 @@
 /* Container - matches maplibregl-ctrl styling. The compound selector beats
    maplibre's own .maplibregl-ctrl-group background rule so the toggle button
    stays dark (with a light icon) in dark mode. */
-.maplibregl-ctrl-group.plugin-control,
-.plugin-control {
+.maplibregl-ctrl-group.plugin-control.maplibre-gl-nasa-earthdata,
+.plugin-control.maplibre-gl-nasa-earthdata {
   background: var(--ne-bg, #fff);
   border-radius: 4px;
   box-shadow: 0 0 0 2px var(--ne-shadow, rgba(0, 0, 0, 0.1));
@@ -91,7 +91,7 @@
 }
 
 /* Toggle button - 29x29 to match navigation control */
-.plugin-control-toggle {
+.maplibre-gl-nasa-earthdata .plugin-control-toggle {
   background: none;
   border: none;
   padding: 0;
@@ -105,11 +105,11 @@
   color: var(--ne-fg, #1f2a37);
 }
 
-.plugin-control-toggle:hover {
+.maplibre-gl-nasa-earthdata .plugin-control-toggle:hover {
   background-color: var(--ne-hover, rgba(0, 0, 0, 0.05));
 }
 
-.plugin-control-toggle .plugin-control-icon {
+.maplibre-gl-nasa-earthdata .plugin-control-toggle .plugin-control-icon {
   width: 100%;
   height: 100%;
   position: relative;
@@ -119,7 +119,7 @@
   line-height: 0;
 }
 
-.plugin-control-toggle .plugin-control-icon svg {
+.maplibre-gl-nasa-earthdata .plugin-control-toggle .plugin-control-icon svg {
   width: 22px;
   height: 22px;
   display: block;
@@ -128,7 +128,7 @@
 }
 
 /* Panel - positioned dynamically by JavaScript for floating behavior */
-.plugin-control-panel {
+.plugin-control-panel.maplibre-gl-nasa-earthdata {
   position: absolute;
   /* Position is set dynamically by _updatePanelPosition() */
   box-sizing: border-box;
@@ -148,7 +148,7 @@
   display: none;
 }
 
-.plugin-control-panel.expanded {
+.plugin-control-panel.maplibre-gl-nasa-earthdata.expanded {
   display: flex;
   flex-direction: column;
 }
@@ -178,13 +178,13 @@
   background: color-mix(in srgb, var(--ne-accent, #2563eb) 35%, transparent);
 }
 
-.plugin-control-panel.nasa-resizing {
+.plugin-control-panel.maplibre-gl-nasa-earthdata.nasa-resizing {
   user-select: none;
 }
 
 /* Small screens: let the panel fill the viewport width */
 @media (max-width: 480px) {
-  .plugin-control-panel {
+  .plugin-control-panel.maplibre-gl-nasa-earthdata {
     width: calc(100vw - 20px) !important;
     max-height: 60vh;
   }
@@ -196,7 +196,7 @@
 }
 
 /* Panel header */
-.plugin-control-header {
+.maplibre-gl-nasa-earthdata .plugin-control-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -209,12 +209,12 @@
   flex: 0 0 auto;
 }
 
-.plugin-control-title {
+.maplibre-gl-nasa-earthdata .plugin-control-title {
   flex: 1 1 auto;
   font-size: 13px;
 }
 
-.plugin-control-close {
+.maplibre-gl-nasa-earthdata .plugin-control-close {
   width: 20px;
   height: 20px;
   border: none;
@@ -230,12 +230,12 @@
   justify-content: center;
 }
 
-.plugin-control-close:hover {
+.maplibre-gl-nasa-earthdata .plugin-control-close:hover {
   color: var(--ne-fg, #333);
 }
 
 /* Content - column flex so the results list is the scrollable region */
-.plugin-control-content {
+.maplibre-gl-nasa-earthdata .plugin-control-content {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -243,7 +243,7 @@
 }
 
 /* Search input */
-.plugin-control-input {
+.maplibre-gl-nasa-earthdata .plugin-control-input {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
@@ -258,11 +258,11 @@
     box-shadow 0.15s;
 }
 
-.plugin-control-input::placeholder {
+.maplibre-gl-nasa-earthdata .plugin-control-input::placeholder {
   color: var(--ne-fg-muted, #888);
 }
 
-.plugin-control-input:focus {
+.maplibre-gl-nasa-earthdata .plugin-control-input:focus {
   border-color: var(--ne-accent, #4a90d9);
   box-shadow: 0 0 0 3px
     color-mix(in srgb, var(--ne-accent, #4a90d9) 20%, transparent);
@@ -663,15 +663,15 @@
 }
 
 /* Generic form helpers (kept from the template for consumer use) */
-.plugin-control-group {
+.maplibre-gl-nasa-earthdata .plugin-control-group {
   margin-bottom: 12px;
 }
 
-.plugin-control-group:last-child {
+.maplibre-gl-nasa-earthdata .plugin-control-group:last-child {
   margin-bottom: 0;
 }
 
-.plugin-control-label {
+.maplibre-gl-nasa-earthdata .plugin-control-label {
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
@@ -679,7 +679,7 @@
   color: var(--ne-fg-muted, #555);
 }
 
-.plugin-control-button {
+.maplibre-gl-nasa-earthdata .plugin-control-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -694,32 +694,32 @@
   transition: background-color 0.15s;
 }
 
-.plugin-control-button:hover {
+.maplibre-gl-nasa-earthdata .plugin-control-button:hover {
   background: var(--ne-accent-hover, #3a7bc8);
 }
 
-.plugin-control-button:focus {
+.maplibre-gl-nasa-earthdata .plugin-control-button:focus {
   outline: 2px solid var(--ne-accent, #4a90d9);
   outline-offset: 2px;
 }
 
-.plugin-control-button:disabled {
+.maplibre-gl-nasa-earthdata .plugin-control-button:disabled {
   background: var(--ne-fg-muted, #ccc);
   cursor: not-allowed;
 }
 
-.plugin-control-flex {
+.maplibre-gl-nasa-earthdata .plugin-control-flex {
   display: flex;
   gap: 8px;
 }
 
-.plugin-control-flex-col {
+.maplibre-gl-nasa-earthdata .plugin-control-flex-col {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.plugin-control-divider {
+.maplibre-gl-nasa-earthdata .plugin-control-divider {
   height: 1px;
   background: var(--ne-border, #e0e0e0);
   margin: 12px 0;
