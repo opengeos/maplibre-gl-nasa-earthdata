@@ -706,7 +706,64 @@ export class NasaEarthdataControl implements IControl {
     panel.appendChild(header);
     panel.appendChild(content);
 
+    // Resize handle on the panel's outer edge for adjusting the width by
+    // dragging. _updatePanelPosition() moves it to the correct side for the
+    // control corner (left edge when right-anchored, right edge when
+    // left-anchored).
+    const resizeHandle = document.createElement("div");
+    resizeHandle.className = "nasa-resize-handle";
+    resizeHandle.setAttribute("aria-hidden", "true");
+    resizeHandle.addEventListener("pointerdown", (e) =>
+      this._startResize(e, resizeHandle),
+    );
+    panel.appendChild(resizeHandle);
+
     return panel;
+  }
+
+  /**
+   * Starts a panel width drag-resize. The drag direction is derived from
+   * the control corner so resizing works whether the panel is anchored to
+   * the left or the right edge of the map.
+   */
+  private _startResize(e: PointerEvent, handle: HTMLElement): void {
+    if (!this._panel) return;
+    e.preventDefault();
+
+    const startX = e.clientX;
+    const startWidth = this._panel.getBoundingClientRect().width;
+    // Right-anchored panels grow leftward, so invert the pointer delta
+    const anchoredRight = !this._getControlPosition().endsWith("left");
+    const maxWidth = Math.max(
+      240,
+      (this._mapContainer?.getBoundingClientRect().width ?? window.innerWidth) -
+        20,
+    );
+
+    const onMove = (ev: PointerEvent) => {
+      const delta = anchoredRight ? startX - ev.clientX : ev.clientX - startX;
+      const width = Math.round(clamp(startWidth + delta, 240, maxWidth));
+      this._state.panelWidth = width;
+      if (this._panel) {
+        this._panel.style.width = `${width}px`;
+      }
+    };
+    const onEnd = (ev: PointerEvent) => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onEnd);
+      handle.removeEventListener("pointercancel", onEnd);
+      if (handle.hasPointerCapture(ev.pointerId)) {
+        handle.releasePointerCapture(ev.pointerId);
+      }
+      this._panel?.classList.remove("nasa-resizing");
+      this._emit("statechange");
+    };
+
+    handle.setPointerCapture(e.pointerId);
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onEnd);
+    handle.addEventListener("pointercancel", onEnd);
+    this._panel.classList.add("nasa-resizing");
   }
 
   /**
@@ -984,6 +1041,12 @@ export class NasaEarthdataControl implements IControl {
     this._panel.style.bottom = "";
     this._panel.style.left = "";
     this._panel.style.right = "";
+
+    // Keep the resize handle on the panel's outer (growing) edge:
+    // right edge for left-anchored panels, left edge for right-anchored ones
+    this._panel
+      .querySelector(".nasa-resize-handle")
+      ?.classList.toggle("nasa-resize-handle-right", position.endsWith("left"));
 
     switch (position) {
       case "top-left":

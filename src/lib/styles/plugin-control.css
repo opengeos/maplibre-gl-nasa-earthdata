@@ -134,7 +134,7 @@
   border-radius: 4px;
   box-shadow: 0 0 0 2px var(--ne-shadow, rgba(0, 0, 0, 0.1));
   min-width: 240px;
-  max-width: min(420px, calc(100vw - 20px));
+  max-width: calc(100vw - 20px);
   max-height: min(70vh, 520px);
   z-index: 1000;
   padding: 8px;
@@ -150,11 +150,45 @@
   flex-direction: column;
 }
 
+/* Resize handle - sits on the panel's outer edge; the control flips it to
+   the right edge (.nasa-resize-handle-right) when the panel is anchored to
+   the left side of the map */
+.nasa-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 8px;
+  cursor: ew-resize;
+  touch-action: none;
+  border-radius: 4px;
+  z-index: 1;
+}
+
+.nasa-resize-handle-right {
+  left: auto;
+  right: -3px;
+}
+
+.nasa-resize-handle:hover,
+.nasa-resizing .nasa-resize-handle {
+  background: color-mix(in srgb, var(--ne-accent, #2563eb) 35%, transparent);
+}
+
+.plugin-control-panel.nasa-resizing {
+  user-select: none;
+}
+
 /* Small screens: let the panel fill the viewport width */
 @media (max-width: 480px) {
   .plugin-control-panel {
     width: calc(100vw - 20px) !important;
     max-height: 60vh;
+  }
+
+  /* Width is pinned to the viewport, so resizing is disabled */
+  .nasa-resize-handle {
+    display: none;
   }
 }
 

@@ -24,7 +24,8 @@ export interface NasaEarthdataControlOptions {
   title?: string;
 
   /**
-   * Width of the control panel in pixels
+   * Initial width of the control panel in pixels. The panel can also be
+   * resized by dragging its outer edge.
    * @default 320
    */
   panelWidth?: number;

@@ -13,6 +13,7 @@ The plugin adds a collapsible map control that fetches the GIBS WMTS capabilitie
 - **Time Dimension Support** - Date picker for time-enabled layers (daily/monthly imagery)
 - **Opacity Control** - Per-layer opacity slider
 - **Collapsible Control** - Compact 29x29 button that expands into a floating panel
+- **Resizable Panel** - Drag the panel edge to adjust its width in any corner
 - **Dark and Light Mode** - Follows the OS preference, or force a theme via the `theme` option
 - **Small Screen Friendly** - Panel fits the viewport with a vertical scrollbar
 - **TypeScript Support** - Full type definitions for all public APIs
@@ -135,7 +136,7 @@ The main control class implementing MapLibre's `IControl` interface.
 | `collapsed`       | `boolean`                       | `true`                 | Whether the panel starts collapsed (showing only the 29x29 toggle button) |
 | `position`        | `string`                        | `'top-right'`          | Control position on the map                                               |
 | `title`           | `string`                        | `'NASA Earthdata'`     | Title displayed in the header                                             |
-| `panelWidth`      | `number`                        | `320`                  | Width of the dropdown panel in pixels                                     |
+| `panelWidth`      | `number`                        | `320`                  | Initial width of the dropdown panel in pixels (drag the edge to resize)   |
 | `className`       | `string`                        | `''`                   | Custom CSS class name                                                     |
 | `capabilitiesUrl` | `string`                        | GIBS EPSG:3857 best    | URL of the WMTS capabilities document                                     |
 | `includeVector`   | `boolean`                       | `false`                | Include vector-tile (MVT) layers in search results                        |
