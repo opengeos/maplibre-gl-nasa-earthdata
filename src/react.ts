@@ -1,14 +1,22 @@
 // React entry point
-export { PluginControlReact } from './lib/core/PluginControlReact';
+export { NasaEarthdataControlReact } from "./lib/core/NasaEarthdataControlReact";
 
 // React hooks
-export { usePluginState } from './lib/hooks';
+export { useNasaEarthdata } from "./lib/hooks";
 
 // Re-export types for React consumers
 export type {
-  PluginControlOptions,
-  PluginState,
-  PluginControlReactProps,
-  PluginControlEvent,
-  PluginControlEventHandler,
-} from './lib/core/types';
+  NasaEarthdataControlOptions,
+  NasaEarthdataState,
+  AddedLayerState,
+  NasaEarthdataReactProps,
+  NasaEarthdataEvent,
+  NasaEarthdataEventPayload,
+  NasaEarthdataEventHandler,
+} from "./lib/core/types";
+export type {
+  GibsLayer,
+  GibsLayerFormat,
+  GibsTimeDimension,
+  GibsCapabilities,
+} from "./lib/gibs";

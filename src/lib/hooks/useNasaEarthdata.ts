@@ -1,35 +1,36 @@
-import { useState, useCallback } from 'react';
-import type { PluginState } from '../core/types';
+import { useState, useCallback } from "react";
+import type { NasaEarthdataState, AddedLayerState } from "../core/types";
 
 /**
- * Default initial state for the plugin
+ * Default initial state for the NASA Earthdata control
  */
-const DEFAULT_STATE: PluginState = {
+const DEFAULT_STATE: NasaEarthdataState = {
   collapsed: true,
-  panelWidth: 300,
-  data: {},
+  panelWidth: 320,
+  query: "",
+  addedLayers: [],
 };
 
 /**
- * Custom hook for managing plugin state in React applications.
+ * Custom hook for managing NASA Earthdata control state in React applications.
  *
  * This hook provides a simple way to track and update the state
- * of a PluginControl from React components.
+ * of a NasaEarthdataControl from React components.
  *
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { state, setCollapsed, setData, reset } = usePluginState();
+ *   const { state, setState, setCollapsed, toggle } = useNasaEarthdata();
  *
  *   return (
  *     <div>
- *       <button onClick={() => setCollapsed(!state.collapsed)}>
+ *       <button onClick={toggle}>
  *         {state.collapsed ? 'Expand' : 'Collapse'}
  *       </button>
- *       <PluginControlReact
+ *       <NasaEarthdataControlReact
  *         map={map}
  *         collapsed={state.collapsed}
- *         onStateChange={(newState) => setState(newState)}
+ *         onStateChange={setState}
  *       />
  *     </div>
  *   );
@@ -39,8 +40,8 @@ const DEFAULT_STATE: PluginState = {
  * @param initialState - Optional initial state values
  * @returns Object containing state and update functions
  */
-export function usePluginState(initialState?: Partial<PluginState>) {
-  const [state, setState] = useState<PluginState>({
+export function useNasaEarthdata(initialState?: Partial<NasaEarthdataState>) {
+  const [state, setState] = useState<NasaEarthdataState>({
     ...DEFAULT_STATE,
     ...initialState,
   });
@@ -60,10 +61,17 @@ export function usePluginState(initialState?: Partial<PluginState>) {
   }, []);
 
   /**
-   * Sets custom data in the state
+   * Sets the search query
    */
-  const setData = useCallback((data: Record<string, unknown>) => {
-    setState((prev) => ({ ...prev, data: { ...prev.data, ...data } }));
+  const setQuery = useCallback((query: string) => {
+    setState((prev) => ({ ...prev, query }));
+  }, []);
+
+  /**
+   * Sets the list of added layers
+   */
+  const setAddedLayers = useCallback((addedLayers: AddedLayerState[]) => {
+    setState((prev) => ({ ...prev, addedLayers }));
   }, []);
 
   /**
@@ -85,7 +93,8 @@ export function usePluginState(initialState?: Partial<PluginState>) {
     setState,
     setCollapsed,
     setPanelWidth,
-    setData,
+    setQuery,
+    setAddedLayers,
     reset,
     toggle,
   };

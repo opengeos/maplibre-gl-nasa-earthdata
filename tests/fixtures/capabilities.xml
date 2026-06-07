@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Capabilities version="1.0.0"
+  xmlns="http://www.opengis.net/wmts/1.0"
+  xmlns:ows="http://www.opengis.net/ows/1.1"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+  <ows:ServiceIdentification>
+    <ows:Title xml:lang="en">Test GIBS Capabilities</ows:Title>
+    <ows:ServiceType>OGC WMTS</ows:ServiceType>
+    <ows:ServiceTypeVersion>1.0.0</ows:ServiceTypeVersion>
+  </ows:ServiceIdentification>
+  <Contents>
+    <!-- PNG layer with a Time dimension -->
+    <Layer>
+      <ows:Title xml:lang="en">Air Temperature (Monthly)</ows:Title>
+      <ows:WGS84BoundingBox crs="urn:ogc:def:crs:OGC:2:84">
+        <ows:LowerCorner>-180 -85.051129</ows:LowerCorner>
+        <ows:UpperCorner>180 85.051129</ows:UpperCorner>
+      </ows:WGS84BoundingBox>
+      <ows:Identifier>Test_Air_Temperature_Monthly</ows:Identifier>
+      <Style isDefault="true">
+        <ows:Title xml:lang="en">default</ows:Title>
+        <ows:Identifier>default</ows:Identifier>
+        <LegendURL xlink:href="https://gibs.earthdata.nasa.gov/legends/Test_Air_Temperature_H.svg"
+          xlink:role="http://earthdata.nasa.gov/gibs/legend-type/horizontal"
+          format="image/svg+xml" width="378" height="86"/>
+      </Style>
+      <Dimension>
+        <ows:Identifier>Time</ows:Identifier>
+        <ows:UOM>ISO8601</ows:UOM>
+        <Default>2026-03-01</Default>
+        <Current>false</Current>
+        <Value>1980-01-01/2023-11-01/P1M</Value>
+        <Value>2024-02-01/2026-03-01/P1M</Value>
+      </Dimension>
+      <TileMatrixSetLink>
+        <TileMatrixSet>GoogleMapsCompatible_Level9</TileMatrixSet>
+      </TileMatrixSetLink>
+      <Format>image/png</Format>
+      <ResourceURL resourceType="tile" format="image/png"
+        template="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Test_Air_Temperature_Monthly/default/{Time}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png"/>
+      <ResourceURL resourceType="tile" format="image/png"
+        template="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Test_Air_Temperature_Monthly/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png"/>
+    </Layer>
+    <!-- JPEG layer without a Time dimension -->
+    <Layer>
+      <ows:Title xml:lang="en">Blue Marble Imagery</ows:Title>
+      <ows:WGS84BoundingBox crs="urn:ogc:def:crs:OGC:2:84">
+        <ows:LowerCorner>-180 -85.051129</ows:LowerCorner>
+        <ows:UpperCorner>180 85.051129</ows:UpperCorner>
+      </ows:WGS84BoundingBox>
+      <ows:Identifier>Test_Blue_Marble</ows:Identifier>
+      <Style isDefault="true">
+        <ows:Title xml:lang="en">default</ows:Title>
+        <ows:Identifier>default</ows:Identifier>
+      </Style>
+      <TileMatrixSetLink>
+        <TileMatrixSet>GoogleMapsCompatible_Level8</TileMatrixSet>
+      </TileMatrixSetLink>
+      <Format>image/jpeg</Format>
+      <ResourceURL resourceType="tile" format="image/jpeg"
+        template="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Test_Blue_Marble/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.jpg"/>
+    </Layer>
+    <!-- Vector-tile (MVT) layer -->
+    <Layer>
+      <ows:Title xml:lang="en">Thermal Anomalies (Vector)</ows:Title>
+      <ows:Identifier>Test_Thermal_Anomalies</ows:Identifier>
+      <Style isDefault="true">
+        <ows:Title xml:lang="en">default</ows:Title>
+        <ows:Identifier>default</ows:Identifier>
+      </Style>
+      <Dimension>
+        <ows:Identifier>Time</ows:Identifier>
+        <ows:UOM>ISO8601</ows:UOM>
+        <Default>2026-06-01</Default>
+        <Current>false</Current>
+        <Value>2020-01-01/2026-06-01/P1D</Value>
+      </Dimension>
+      <TileMatrixSetLink>
+        <TileMatrixSet>GoogleMapsCompatible_Level6</TileMatrixSet>
+      </TileMatrixSetLink>
+      <Format>application/vnd.mapbox-vector-tile</Format>
+      <ResourceURL resourceType="tile" format="application/vnd.mapbox-vector-tile"
+        template="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Test_Thermal_Anomalies/default/{Time}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.mvt"/>
+    </Layer>
+    <!-- Malformed layer: no tile ResourceURL -->
+    <Layer>
+      <ows:Title xml:lang="en">Broken Layer</ows:Title>
+      <ows:Identifier>Test_Broken_Layer</ows:Identifier>
+      <Style isDefault="true">
+        <ows:Title xml:lang="en">default</ows:Title>
+        <ows:Identifier>default</ows:Identifier>
+      </Style>
+      <TileMatrixSetLink>
+        <TileMatrixSet>GoogleMapsCompatible_Level6</TileMatrixSet>
+      </TileMatrixSetLink>
+      <Format>image/png</Format>
+    </Layer>
+  </Contents>
+</Capabilities>

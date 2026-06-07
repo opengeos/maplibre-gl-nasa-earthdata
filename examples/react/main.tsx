@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import maplibregl, { Map } from 'maplibre-gl';
-import { PluginControlReact, usePluginState } from '../../src/react';
+import { NasaEarthdataControlReact, useNasaEarthdata } from '../../src/react';
+import type { GibsLayer } from '../../src/react';
 import '../../src/index.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -11,7 +12,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 function App() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<Map | null>(null);
-  const { state, toggle } = usePluginState({ collapsed: false });
+  const { state, setState, toggle } = useNasaEarthdata({ collapsed: false });
+  const [lastAdded, setLastAdded] = useState<string | null>(null);
 
   // Initialize the map
   useEffect(() => {
@@ -19,8 +21,8 @@ function App() {
 
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
-      style: 'https://demotiles.maplibre.org/style.json',
-      center: [0, 0],
+      style: 'https://tiles.openfreemap.org/styles/liberty',
+      center: [0, 20],
       zoom: 2,
     });
 
@@ -39,8 +41,8 @@ function App() {
     };
   }, []);
 
-  const handleStateChange = (newState: typeof state) => {
-    console.log('Plugin state changed:', newState);
+  const handleLayerAdd = (layer: GibsLayer) => {
+    setLastAdded(layer.title);
   };
 
   return (
@@ -56,7 +58,7 @@ function App() {
           left: 10,
           zIndex: 1,
           padding: '8px 16px',
-          background: '#4a90d9',
+          background: '#2563eb',
           color: 'white',
           border: 'none',
           borderRadius: 4,
@@ -67,14 +69,33 @@ function App() {
         {state.collapsed ? 'Expand' : 'Collapse'} Panel
       </button>
 
-      {/* Plugin control */}
+      {/* Status bar driven by control state */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 10,
+          left: 10,
+          zIndex: 1,
+          padding: '6px 12px',
+          background: 'rgba(0, 0, 0, 0.65)',
+          color: 'white',
+          borderRadius: 4,
+          fontSize: 12,
+        }}
+      >
+        {state.addedLayers.length} layer{state.addedLayers.length === 1 ? '' : 's'} on map
+        {lastAdded ? ` · last added: ${lastAdded}` : ''}
+      </div>
+
+      {/* NASA Earthdata control */}
       {map && (
-        <PluginControlReact
+        <NasaEarthdataControlReact
           map={map}
-          title="React Plugin"
+          title="NASA Earthdata"
           collapsed={state.collapsed}
           panelWidth={320}
-          onStateChange={handleStateChange}
+          onStateChange={setState}
+          onLayerAdd={handleLayerAdd}
         />
       )}
     </div>
