@@ -400,10 +400,10 @@ export class NasaEarthdataControl implements IControl {
       opacity?: number;
       visible?: boolean;
       before?: string;
+      key?: string;
     },
   ): void {
     if (!this._map) return;
-    if (this._addedLayers.has(layerId)) return;
 
     const layer = this._client.getLayer(layerId);
     if (!layer) {
@@ -417,7 +417,11 @@ export class NasaEarthdataControl implements IControl {
     const opacity = clamp(options?.opacity ?? 1, 0, 1);
     const visible = options?.visible ?? true;
     const before = options?.before ?? this._insertBefore;
-    const mapId = LAYER_ID_PREFIX + layerId;
+
+    // Restoring a known instance key is a no-op if it is already on the map
+    if (options?.key && this._addedLayers.has(options.key)) return;
+    const key = options?.key ?? this._instanceKey(layer, date);
+    const mapId = LAYER_ID_PREFIX + key;
 
     this._map.addSource(mapId, {
       type: "raster",
@@ -437,8 +441,8 @@ export class NasaEarthdataControl implements IControl {
       before && this._map.getLayer(before) ? before : undefined,
     );
 
-    const added: AddedLayerState = { id: layerId, date, opacity, visible };
-    this._addedLayers.set(layerId, added);
+    const added: AddedLayerState = { key, id: layerId, date, opacity, visible };
+    this._addedLayers.set(key, added);
     this._syncAddedLayersState();
     this._renderResults();
     this._renderAddedSection();
@@ -448,37 +452,69 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
-   * Removes a previously added GIBS layer from the map.
-   *
-   * @param layerId - The GIBS layer identifier
+   * Builds a unique instance key for a layer/date pair. Non-time layers can
+   * only be added once; time-enabled layers get one instance per addition,
+   * so a numeric suffix disambiguates repeated adds at the same date.
    */
-  removeLayer(layerId: string): void {
-    if (!this._addedLayers.has(layerId)) return;
+  private _instanceKey(layer: GibsLayer, date?: string): string {
+    if (!layer.time) return layer.id;
 
-    this._removeMapLayer(layerId);
-    this._addedLayers.delete(layerId);
-    this._openLegends.delete(layerId);
+    const base = `${layer.id}@${date ?? layer.time.default}`;
+    if (!this._addedLayers.has(base)) return base;
+    let n = 2;
+    while (this._addedLayers.has(`${base}#${n}`)) n++;
+    return `${base}#${n}`;
+  }
+
+  /**
+   * Resolves an instance key or a GIBS layer identifier to instances.
+   * An exact key match wins; otherwise all instances of the layer match.
+   */
+  private _resolveInstances(keyOrId: string): AddedLayerState[] {
+    const exact = this._addedLayers.get(keyOrId);
+    if (exact) return [exact];
+    return Array.from(this._addedLayers.values()).filter(
+      (l) => l.id === keyOrId,
+    );
+  }
+
+  /**
+   * Removes added GIBS layer instances from the map. Pass an instance key
+   * to remove a single instance, or a GIBS layer identifier to remove all
+   * instances of that layer.
+   *
+   * @param keyOrId - An instance key or a GIBS layer identifier
+   */
+  removeLayer(keyOrId: string): void {
+    const instances = this._resolveInstances(keyOrId);
+    if (instances.length === 0) return;
+
+    for (const instance of instances) {
+      this._removeMapLayer(instance.key);
+      this._addedLayers.delete(instance.key);
+      this._openLegends.delete(instance.key);
+      this._emit("layerremove", { layer: this._client.getLayer(instance.id) });
+    }
     this._syncAddedLayersState();
     this._renderResults();
     this._renderAddedSection();
     this._refreshInsertOptions();
-    this._emit("layerremove", { layer: this._client.getLayer(layerId) });
     this._emit("statechange");
   }
 
   /**
-   * Changes the date of an added time-enabled layer.
+   * Changes the date of an added time-enabled layer instance.
    *
-   * @param layerId - The GIBS layer identifier
+   * @param keyOrId - An instance key or a GIBS layer identifier
    * @param date - The new ISO 8601 date
    */
-  setLayerDate(layerId: string, date: string): void {
-    const added = this._addedLayers.get(layerId);
-    const layer = this._client.getLayer(layerId);
+  setLayerDate(keyOrId: string, date: string): void {
+    const added = this._resolveInstances(keyOrId)[0];
+    const layer = added ? this._client.getLayer(added.id) : undefined;
     if (!this._map || !added || !layer) return;
 
     added.date = date;
-    const mapId = LAYER_ID_PREFIX + layerId;
+    const mapId = LAYER_ID_PREFIX + added.key;
     const source = this._map.getSource(mapId) as RasterTileSource | undefined;
     const tiles = [buildTileUrl(layer, date)];
 
@@ -486,12 +522,13 @@ export class NasaEarthdataControl implements IControl {
       source.setTiles(tiles);
     } else {
       // Fallback: re-create the source and layer
-      this._removeMapLayer(layerId);
-      this._addedLayers.delete(layerId);
-      this.addLayer(layerId, {
+      this._removeMapLayer(added.key);
+      this._addedLayers.delete(added.key);
+      this.addLayer(added.id, {
         date,
         opacity: added.opacity,
         visible: added.visible,
+        key: added.key,
       });
       return;
     }
@@ -501,18 +538,18 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
-   * Changes the opacity of an added layer.
+   * Changes the opacity of an added layer instance.
    *
-   * @param layerId - The GIBS layer identifier
+   * @param keyOrId - An instance key or a GIBS layer identifier
    * @param opacity - The new opacity (0 to 1)
    */
-  setLayerOpacity(layerId: string, opacity: number): void {
-    const added = this._addedLayers.get(layerId);
+  setLayerOpacity(keyOrId: string, opacity: number): void {
+    const added = this._resolveInstances(keyOrId)[0];
     if (!this._map || !added) return;
 
     added.opacity = clamp(opacity, 0, 1);
     this._map.setPaintProperty(
-      LAYER_ID_PREFIX + layerId,
+      LAYER_ID_PREFIX + added.key,
       "raster-opacity",
       added.opacity,
     );
@@ -521,18 +558,18 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
-   * Toggles the visibility of an added layer on the map.
+   * Toggles the visibility of an added layer instance on the map.
    *
-   * @param layerId - The GIBS layer identifier
+   * @param keyOrId - An instance key or a GIBS layer identifier
    * @param visible - Whether the layer should be visible
    */
-  setLayerVisibility(layerId: string, visible: boolean): void {
-    const added = this._addedLayers.get(layerId);
+  setLayerVisibility(keyOrId: string, visible: boolean): void {
+    const added = this._resolveInstances(keyOrId)[0];
     if (!this._map || !added) return;
 
     added.visible = visible;
     this._map.setLayoutProperty(
-      LAYER_ID_PREFIX + layerId,
+      LAYER_ID_PREFIX + added.key,
       "visibility",
       visible ? "visible" : "none",
     );
@@ -541,11 +578,11 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
-   * Removes the map source and layer for a GIBS layer id, if present.
+   * Removes the map source and layer for an instance key, if present.
    */
-  private _removeMapLayer(layerId: string): void {
+  private _removeMapLayer(key: string): void {
     if (!this._map) return;
-    const mapId = LAYER_ID_PREFIX + layerId;
+    const mapId = LAYER_ID_PREFIX + key;
     if (this._map.getLayer(mapId)) {
       this._map.removeLayer(mapId);
     }
@@ -566,37 +603,38 @@ export class NasaEarthdataControl implements IControl {
    * adds missing layers, removes extras, and applies date/opacity changes.
    */
   private _reconcileAddedLayers(desired: AddedLayerState[]): void {
-    const desiredIds = new Set(desired.map((l) => l.id));
+    const desiredKeys = new Set(desired.map((l) => l.key));
 
-    for (const existingId of Array.from(this._addedLayers.keys())) {
-      if (!desiredIds.has(existingId)) {
-        this.removeLayer(existingId);
+    for (const existingKey of Array.from(this._addedLayers.keys())) {
+      if (!desiredKeys.has(existingKey)) {
+        this.removeLayer(existingKey);
       }
     }
 
     for (const target of desired) {
-      const existing = this._addedLayers.get(target.id);
+      const existing = this._addedLayers.get(target.key);
       if (!existing) {
         this.addLayer(target.id, {
           date: target.date,
           opacity: target.opacity,
           visible: target.visible,
+          key: target.key,
         });
       } else {
         if (target.date && target.date !== existing.date) {
-          this.setLayerDate(target.id, target.date);
+          this.setLayerDate(target.key, target.date);
         }
         if (
           target.opacity !== undefined &&
           target.opacity !== existing.opacity
         ) {
-          this.setLayerOpacity(target.id, target.opacity);
+          this.setLayerOpacity(target.key, target.opacity);
         }
         if (
           target.visible !== undefined &&
           target.visible !== existing.visible
         ) {
-          this.setLayerVisibility(target.id, target.visible);
+          this.setLayerVisibility(target.key, target.visible);
         }
       }
     }
@@ -1011,11 +1049,16 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
-   * Creates a single catalog layer row with title, badges, and an
-   * add/remove toggle. Per-layer controls live in the added-layers section.
+   * Creates a single catalog layer row with title, badges, and an action
+   * button. Non-time layers toggle add/remove; time-enabled layers always
+   * offer "Add" so additional instances with different dates can be added.
+   * Per-layer controls live in the added-layers section.
    */
   private _createLayerRow(layer: GibsLayer): HTMLElement {
-    const added = this._addedLayers.has(layer.id);
+    const instanceCount = Array.from(this._addedLayers.values()).filter(
+      (l) => l.id === layer.id,
+    ).length;
+    const added = instanceCount > 0;
 
     const row = document.createElement("div");
     row.className = `nasa-layer-row${added ? " nasa-layer-row-added" : ""}`;
@@ -1045,20 +1088,33 @@ export class NasaEarthdataControl implements IControl {
       timeBadge.title = `Default date: ${layer.time.default}`;
       badges.appendChild(timeBadge);
     }
+    if (instanceCount > 1) {
+      const countBadge = document.createElement("span");
+      countBadge.className = "nasa-badge nasa-badge-time";
+      countBadge.textContent = `${instanceCount} added`;
+      badges.appendChild(countBadge);
+    }
 
     info.appendChild(titleEl);
     info.appendChild(badges);
 
+    // Time-enabled layers can be added repeatedly (one instance per date),
+    // so their button always reads "Add"
+    const isRemove = added && !layer.time;
     const actionBtn = document.createElement("button");
     actionBtn.type = "button";
-    actionBtn.className = `nasa-layer-action${added ? " nasa-layer-action-remove" : ""}`;
-    actionBtn.textContent = added ? "Remove" : "Add";
+    actionBtn.className = `nasa-layer-action${isRemove ? " nasa-layer-action-remove" : ""}`;
+    actionBtn.textContent = isRemove ? "Remove" : "Add";
     actionBtn.setAttribute(
       "aria-label",
-      `${added ? "Remove" : "Add"} layer ${layer.title}`,
+      isRemove
+        ? `Remove layer ${layer.title}`
+        : added
+          ? `Add layer ${layer.title} for another date`
+          : `Add layer ${layer.title}`,
     );
     actionBtn.addEventListener("click", () => {
-      if (this._addedLayers.has(layer.id)) {
+      if (!layer.time && this._resolveInstances(layer.id).length > 0) {
         this.removeLayer(layer.id);
       } else {
         this.addLayer(layer.id);
@@ -1122,16 +1178,25 @@ export class NasaEarthdataControl implements IControl {
       `Toggle visibility of ${layer.title}`,
     );
     visCheckbox.addEventListener("change", () => {
-      this.setLayerVisibility(layer.id, visCheckbox.checked);
+      this.setLayerVisibility(added.key, visCheckbox.checked);
     });
 
     const titleEl = document.createElement("span");
     titleEl.className = "nasa-added-title";
     titleEl.textContent = layer.title;
-    titleEl.title = layer.id;
+    titleEl.title = added.key;
 
     visLabel.appendChild(visCheckbox);
     visLabel.appendChild(titleEl);
+
+    // Date chip distinguishes multiple instances of the same time layer
+    let dateChip: HTMLElement | undefined;
+    if (layer.time && added.date) {
+      dateChip = document.createElement("span");
+      dateChip.className = "nasa-badge nasa-badge-time";
+      dateChip.textContent = added.date.slice(0, 10);
+      visLabel.appendChild(dateChip);
+    }
 
     const actions = document.createElement("div");
     actions.className = "nasa-added-actions";
@@ -1140,7 +1205,7 @@ export class NasaEarthdataControl implements IControl {
       const legendBtn = document.createElement("button");
       legendBtn.type = "button";
       legendBtn.className = `nasa-icon-button${
-        this._openLegends.has(layer.id) ? " active" : ""
+        this._openLegends.has(added.key) ? " active" : ""
       }`;
       legendBtn.title = "Toggle legend";
       legendBtn.setAttribute("aria-label", `Toggle legend for ${layer.title}`);
@@ -1153,10 +1218,10 @@ export class NasaEarthdataControl implements IControl {
         </svg>
       `;
       legendBtn.addEventListener("click", () => {
-        if (this._openLegends.has(layer.id)) {
-          this._openLegends.delete(layer.id);
+        if (this._openLegends.has(added.key)) {
+          this._openLegends.delete(added.key);
         } else {
-          this._openLegends.add(layer.id);
+          this._openLegends.add(added.key);
         }
         this._renderAddedSection();
       });
@@ -1175,7 +1240,7 @@ export class NasaEarthdataControl implements IControl {
       </svg>
     `;
     removeBtn.addEventListener("click", () => {
-      this.removeLayer(layer.id);
+      this.removeLayer(added.key);
     });
     actions.appendChild(removeBtn);
 
@@ -1204,7 +1269,7 @@ export class NasaEarthdataControl implements IControl {
 
       opacityInput.addEventListener("input", () => {
         const value = Number(opacityInput.value);
-        this.setLayerOpacity(layer.id, value);
+        this.setLayerOpacity(added.key, value);
         opacityValue.textContent = `${Math.round(value * 100)}%`;
       });
 
@@ -1228,7 +1293,10 @@ export class NasaEarthdataControl implements IControl {
       if (range.max) dateInput.max = range.max;
       dateInput.addEventListener("change", () => {
         if (dateInput.value) {
-          this.setLayerDate(layer.id, dateInput.value);
+          this.setLayerDate(added.key, dateInput.value);
+          if (dateChip) {
+            dateChip.textContent = dateInput.value;
+          }
         }
       });
 
@@ -1237,7 +1305,7 @@ export class NasaEarthdataControl implements IControl {
     }
 
     // Legend image (GIBS horizontal legend SVG)
-    if (layer.legendUrl && this._openLegends.has(layer.id)) {
+    if (layer.legendUrl && this._openLegends.has(added.key)) {
       const legend = document.createElement("img");
       legend.className = "nasa-legend-image";
       legend.src = layer.legendUrl;

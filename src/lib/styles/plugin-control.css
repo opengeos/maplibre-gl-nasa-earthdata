@@ -586,6 +586,7 @@
   color: var(--ne-badge-fg, #4b5563);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .nasa-badge-time {

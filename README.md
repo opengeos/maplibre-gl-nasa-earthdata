@@ -13,7 +13,7 @@ The plugin adds a collapsible map control that fetches the GIBS WMTS capabilitie
 - **Category Browser** - Layers grouped into collapsible categories by platform/instrument (MODIS, VIIRS, MERRA2, ...)
 - **Layer Management** - Added-layers panel with visibility toggle, legend display, opacity slider, and removal
 - **Insert Before** - Choose where new layers are inserted in the map's layer stack (e.g. below labels)
-- **Time Dimension Support** - Date picker for time-enabled layers (daily/monthly imagery)
+- **Time Dimension Support** - Date picker for time-enabled layers (daily/monthly imagery); add the same layer multiple times with different dates to compare
 - **Collapsible Control** - Compact 29x29 button that expands into a floating panel
 - **Resizable Panel** - Drag the panel edge to adjust its width in any corner
 - **Dark and Light Mode** - Follows the OS preference, or force a theme via the `theme` option
@@ -151,11 +151,11 @@ The main control class implementing MapLibre's `IControl` interface.
 
 - `getCapabilities(force?)` - Fetch and cache the GIBS layer catalog
 - `search(query)` - Search loaded layers by title or identifier
-- `addLayer(layerId, { date?, opacity?, visible?, before? })` - Add a GIBS layer to the map
-- `removeLayer(layerId)` - Remove a previously added layer
-- `setLayerDate(layerId, date)` - Change the date of a time-enabled layer
-- `setLayerOpacity(layerId, opacity)` - Change a layer's opacity (0 to 1)
-- `setLayerVisibility(layerId, visible)` - Show or hide an added layer
+- `addLayer(layerId, { date?, opacity?, visible?, before? })` - Add a GIBS layer to the map. Time-enabled layers can be added multiple times with different dates; each addition is an instance with a unique `key` (see `AddedLayerState`)
+- `removeLayer(keyOrId)` - Remove an instance by key, or all instances of a layer by its GIBS identifier
+- `setLayerDate(keyOrId, date)` - Change the date of a time-enabled layer instance
+- `setLayerOpacity(keyOrId, opacity)` - Change an instance's opacity (0 to 1)
+- `setLayerVisibility(keyOrId, visible)` - Show or hide an added instance
 - `getAddedLayers()` - Get the state of all added layers
 - `toggle()` / `expand()` / `collapse()` - Control the panel
 - `getState()` / `setState(state)` - Read or reconcile the control state

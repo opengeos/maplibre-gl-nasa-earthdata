@@ -73,9 +73,18 @@ export interface NasaEarthdataControlOptions {
 }
 
 /**
- * State of a single GIBS layer added to the map
+ * State of a single GIBS layer instance added to the map.
+ *
+ * A time-enabled layer can be added multiple times with different dates;
+ * each addition is a separate instance identified by `key`.
  */
 export interface AddedLayerState {
+  /**
+   * Unique instance key (e.g. "MODIS_..._TrueColor@2024-06-01").
+   * Use this with removeLayer/setLayerDate/setLayerOpacity/setLayerVisibility.
+   */
+  key: string;
+
   /**
    * GIBS layer identifier
    */
