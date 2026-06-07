@@ -422,23 +422,39 @@ export class NasaEarthdataControl implements IControl {
     const key = options?.key ?? this._instanceKey(layer, date);
     const mapId = LAYER_ID_PREFIX + key;
 
-    this._map.addSource(mapId, {
-      type: "raster",
-      tiles: [buildTileUrl(layer, date)],
-      tileSize: 256,
-      maxzoom: layer.maxZoom,
-      attribution: this._options.attribution,
-    });
-    this._map.addLayer(
-      {
-        id: mapId,
+    // Host applications that persist and restore layers may have already
+    // recreated the native source/layer from saved state. Reuse them when
+    // present instead of re-adding (which would throw on a duplicate id),
+    // and apply the requested opacity/visibility so control state and map
+    // agree.
+    if (!this._map.getSource(mapId)) {
+      this._map.addSource(mapId, {
         type: "raster",
-        source: mapId,
-        paint: { "raster-opacity": opacity },
-        layout: { visibility: visible ? "visible" : "none" },
-      },
-      before && this._map.getLayer(before) ? before : undefined,
-    );
+        tiles: [buildTileUrl(layer, date)],
+        tileSize: 256,
+        maxzoom: layer.maxZoom,
+        attribution: this._options.attribution,
+      });
+    }
+    if (!this._map.getLayer(mapId)) {
+      this._map.addLayer(
+        {
+          id: mapId,
+          type: "raster",
+          source: mapId,
+          paint: { "raster-opacity": opacity },
+          layout: { visibility: visible ? "visible" : "none" },
+        },
+        before && this._map.getLayer(before) ? before : undefined,
+      );
+    } else {
+      this._map.setPaintProperty(mapId, "raster-opacity", opacity);
+      this._map.setLayoutProperty(
+        mapId,
+        "visibility",
+        visible ? "visible" : "none",
+      );
+    }
 
     const added: AddedLayerState = { key, id: layerId, date, opacity, visible };
     this._addedLayers.set(key, added);
