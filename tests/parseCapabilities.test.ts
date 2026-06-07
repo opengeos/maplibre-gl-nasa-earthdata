@@ -26,6 +26,11 @@ describe('parseCapabilities', () => {
     expect(layers.map((l) => l.id)).not.toContain('Test_Broken_Layer');
   });
 
+  it('derives the category from the identifier prefix', () => {
+    const { layers } = parseCapabilities(xml);
+    expect(layers.every((l) => l.category === 'Test')).toBe(true);
+  });
+
   it('parses titles and sorts layers by title', () => {
     const { layers } = parseCapabilities(xml);
     expect(layers.map((l) => l.title)).toEqual(['Air Temperature (Monthly)', 'Blue Marble Imagery']);

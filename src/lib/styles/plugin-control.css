@@ -78,7 +78,10 @@
   color-scheme: dark;
 }
 
-/* Container - matches maplibregl-ctrl styling */
+/* Container - matches maplibregl-ctrl styling. The compound selector beats
+   maplibre's own .maplibregl-ctrl-group background rule so the toggle button
+   stays dark (with a light icon) in dark mode. */
+.maplibregl-ctrl-group.plugin-control,
 .plugin-control {
   background: var(--ne-bg, #fff);
   border-radius: 4px;
@@ -277,33 +280,249 @@
   padding: 6px 2px;
 }
 
-/* Results list - the vertical scroll region */
-.nasa-results {
+/* "Insert before" row */
+.nasa-insert-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.nasa-insert-label {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ne-fg-muted, #555);
+  white-space: nowrap;
+}
+
+.nasa-insert-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 6px;
+  font-size: 12px;
+  color: var(--ne-fg, #1f2a37);
+  background: var(--ne-input-bg, #fff);
+  border: 1px solid var(--ne-input-border, #ddd);
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+}
+
+.nasa-insert-select:focus {
+  border-color: var(--ne-accent, #4a90d9);
+}
+
+/* Scrollable body holding the categories and the added-layers section */
+.nasa-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   scrollbar-width: thin;
   scrollbar-color: var(--ne-scrollbar, #ccc) transparent;
 }
 
-.nasa-results::-webkit-scrollbar {
+.nasa-body::-webkit-scrollbar {
   width: 6px;
 }
 
-.nasa-results::-webkit-scrollbar-track {
+.nasa-body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.nasa-results::-webkit-scrollbar-thumb {
+.nasa-body::-webkit-scrollbar-thumb {
   background: var(--ne-scrollbar, #ccc);
   border-radius: 3px;
 }
 
-.nasa-results::-webkit-scrollbar-thumb:hover {
+.nasa-body::-webkit-scrollbar-thumb:hover {
   background: var(--ne-scrollbar-hover, #aaa);
+}
+
+/* Category groups */
+.nasa-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nasa-category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ne-fg, #1f2a37);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.nasa-category-header:hover {
+  background: var(--ne-hover, rgba(0, 0, 0, 0.05));
+}
+
+.nasa-category-chevron {
+  display: flex;
+  align-items: center;
+  color: var(--ne-fg-muted, #888);
+  transition: transform 0.15s ease;
+}
+
+.nasa-category-chevron svg {
+  stroke: currentColor;
+  fill: none;
+}
+
+.nasa-category-header.expanded .nasa-category-chevron {
+  transform: rotate(90deg);
+}
+
+.nasa-category-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nasa-category-count {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--ne-badge-bg, #eef2f7);
+  color: var(--ne-badge-fg, #4b5563);
+}
+
+.nasa-category-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0 8px 18px;
+}
+
+/* Added layers section */
+.nasa-added-section {
+  flex: 0 0 auto;
+}
+
+.nasa-added-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ne-fg, #1f2a37);
+  padding: 8px 2px 6px;
+  margin-top: 4px;
+  border-top: 1px solid var(--ne-border, #e0e0e0);
+}
+
+.nasa-added-card {
+  background: var(--ne-row-bg, #f8fafc);
+  border: 1px solid var(--ne-border, #e0e0e0);
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nasa-added-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nasa-added-vis {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.nasa-added-checkbox {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--ne-accent, #2563eb);
+  cursor: pointer;
+}
+
+.nasa-added-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ne-fg, #1f2a37);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nasa-added-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nasa-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ne-fg-muted, #888);
+  cursor: pointer;
+}
+
+.nasa-icon-button svg {
+  stroke: currentColor;
+  fill: none;
+}
+
+.nasa-icon-button:hover {
+  background: var(--ne-hover, rgba(0, 0, 0, 0.05));
+  color: var(--ne-fg, #1f2a37);
+}
+
+.nasa-icon-button.active {
+  color: var(--ne-accent, #2563eb);
+}
+
+.nasa-icon-button-danger:hover {
+  color: var(--ne-danger, #dc2626);
+}
+
+.nasa-opacity-value {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--ne-fg-muted, #888);
+  min-width: 32px;
+  text-align: right;
+}
+
+.nasa-legend-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 4px;
+  background: #fff;
+  padding: 2px;
 }
 
 /* Status messages (loading, error, empty) */

@@ -85,6 +85,13 @@ export class NasaEarthdataControl implements IControl {
   private _searchInput?: HTMLInputElement;
   private _metaEl?: HTMLElement;
   private _resultsEl?: HTMLElement;
+  private _addedEl?: HTMLElement;
+  private _insertSelect?: HTMLSelectElement;
+
+  // UI state: expanded category groups, open legends, insertion position
+  private _expandedCategories = new Set<string>();
+  private _openLegends = new Set<string>();
+  private _insertBefore = "";
 
   // Panel positioning handlers
   private _resizeHandler: (() => void) | null = null;
@@ -181,6 +188,9 @@ export class NasaEarthdataControl implements IControl {
     this._searchInput = undefined;
     this._metaEl = undefined;
     this._resultsEl = undefined;
+    this._addedEl = undefined;
+    this._insertSelect = undefined;
+    this._openLegends.clear();
     this._eventHandlers.clear();
   }
 
@@ -246,6 +256,7 @@ export class NasaEarthdataControl implements IControl {
           .then(() => {
             this._reconcileAddedLayers(desired);
             this._renderResults();
+            this._renderAddedSection();
             this._emit("statechange");
           })
           .catch((error: unknown) => {
@@ -275,6 +286,7 @@ export class NasaEarthdataControl implements IControl {
         this._panel.classList.add("expanded");
         this._updatePanelPosition();
         this._loadCapabilities();
+        this._refreshInsertOptions();
         this._emit("expand");
       }
     }
@@ -379,11 +391,16 @@ export class NasaEarthdataControl implements IControl {
    * when using the control programmatically).
    *
    * @param layerId - The GIBS layer identifier
-   * @param options - Optional date, opacity, and insertion position
+   * @param options - Optional date, opacity, visibility, and insertion position
    */
   addLayer(
     layerId: string,
-    options?: { date?: string; opacity?: number; before?: string },
+    options?: {
+      date?: string;
+      opacity?: number;
+      visible?: boolean;
+      before?: string;
+    },
   ): void {
     if (!this._map) return;
     if (this._addedLayers.has(layerId)) return;
@@ -398,6 +415,8 @@ export class NasaEarthdataControl implements IControl {
 
     const date = options?.date ?? layer.time?.default;
     const opacity = clamp(options?.opacity ?? 1, 0, 1);
+    const visible = options?.visible ?? true;
+    const before = options?.before ?? this._insertBefore;
     const mapId = LAYER_ID_PREFIX + layerId;
 
     this._map.addSource(mapId, {
@@ -413,14 +432,17 @@ export class NasaEarthdataControl implements IControl {
         type: "raster",
         source: mapId,
         paint: { "raster-opacity": opacity },
+        layout: { visibility: visible ? "visible" : "none" },
       },
-      options?.before,
+      before && this._map.getLayer(before) ? before : undefined,
     );
 
-    const added: AddedLayerState = { id: layerId, date, opacity };
+    const added: AddedLayerState = { id: layerId, date, opacity, visible };
     this._addedLayers.set(layerId, added);
     this._syncAddedLayersState();
     this._renderResults();
+    this._renderAddedSection();
+    this._refreshInsertOptions();
     this._emit("layeradd", { layer });
     this._emit("statechange");
   }
@@ -435,8 +457,11 @@ export class NasaEarthdataControl implements IControl {
 
     this._removeMapLayer(layerId);
     this._addedLayers.delete(layerId);
+    this._openLegends.delete(layerId);
     this._syncAddedLayersState();
     this._renderResults();
+    this._renderAddedSection();
+    this._refreshInsertOptions();
     this._emit("layerremove", { layer: this._client.getLayer(layerId) });
     this._emit("statechange");
   }
@@ -463,7 +488,11 @@ export class NasaEarthdataControl implements IControl {
       // Fallback: re-create the source and layer
       this._removeMapLayer(layerId);
       this._addedLayers.delete(layerId);
-      this.addLayer(layerId, { date, opacity: added.opacity });
+      this.addLayer(layerId, {
+        date,
+        opacity: added.opacity,
+        visible: added.visible,
+      });
       return;
     }
 
@@ -486,6 +515,26 @@ export class NasaEarthdataControl implements IControl {
       LAYER_ID_PREFIX + layerId,
       "raster-opacity",
       added.opacity,
+    );
+    this._syncAddedLayersState();
+    this._emit("statechange");
+  }
+
+  /**
+   * Toggles the visibility of an added layer on the map.
+   *
+   * @param layerId - The GIBS layer identifier
+   * @param visible - Whether the layer should be visible
+   */
+  setLayerVisibility(layerId: string, visible: boolean): void {
+    const added = this._addedLayers.get(layerId);
+    if (!this._map || !added) return;
+
+    added.visible = visible;
+    this._map.setLayoutProperty(
+      LAYER_ID_PREFIX + layerId,
+      "visibility",
+      visible ? "visible" : "none",
     );
     this._syncAddedLayersState();
     this._emit("statechange");
@@ -531,6 +580,7 @@ export class NasaEarthdataControl implements IControl {
         this.addLayer(target.id, {
           date: target.date,
           opacity: target.opacity,
+          visible: target.visible,
         });
       } else {
         if (target.date && target.date !== existing.date) {
@@ -541,6 +591,12 @@ export class NasaEarthdataControl implements IControl {
           target.opacity !== existing.opacity
         ) {
           this.setLayerOpacity(target.id, target.opacity);
+        }
+        if (
+          target.visible !== undefined &&
+          target.visible !== existing.visible
+        ) {
+          this.setLayerVisibility(target.id, target.visible);
         }
       }
     }
@@ -559,6 +615,8 @@ export class NasaEarthdataControl implements IControl {
       .then(() => {
         this._loading = false;
         this._renderResults();
+        this._renderAddedSection();
+        this._refreshInsertOptions();
         this._emit("capabilitiesload");
       })
       .catch((error: unknown) => {
@@ -672,7 +730,8 @@ export class NasaEarthdataControl implements IControl {
     header.appendChild(title);
     header.appendChild(closeBtn);
 
-    // Create content area: search input, meta line, results list
+    // Create content area: search input, insert-before row, category list,
+    // and the added-layers management section
     const content = document.createElement("div");
     content.className = "plugin-control-content nasa-content";
 
@@ -690,18 +749,49 @@ export class NasaEarthdataControl implements IControl {
     search.addEventListener("input", onSearch);
     this._searchInput = search;
 
+    // "Insert before" row: choose where new layers are inserted in the
+    // map's layer stack
+    const insertRow = document.createElement("div");
+    insertRow.className = "nasa-insert-row";
+
+    const insertLabel = document.createElement("span");
+    insertLabel.className = "nasa-insert-label";
+    insertLabel.textContent = "Insert before";
+
+    const insertSelect = document.createElement("select");
+    insertSelect.className = "nasa-insert-select";
+    insertSelect.setAttribute("aria-label", "Insert new layers before");
+    insertSelect.addEventListener("change", () => {
+      this._insertBefore = insertSelect.value;
+    });
+    this._insertSelect = insertSelect;
+
+    insertRow.appendChild(insertLabel);
+    insertRow.appendChild(insertSelect);
+
     const meta = document.createElement("div");
     meta.className = "nasa-meta";
     this._metaEl = meta;
 
+    // Scrollable body holding the category groups and the added layers
+    const body = document.createElement("div");
+    body.className = "nasa-body";
+
     const results = document.createElement("div");
     results.className = "nasa-results";
-    results.setAttribute("role", "list");
     this._resultsEl = results;
 
+    const added = document.createElement("div");
+    added.className = "nasa-added-section";
+    this._addedEl = added;
+
+    body.appendChild(results);
+    body.appendChild(added);
+
     content.appendChild(search);
+    content.appendChild(insertRow);
     content.appendChild(meta);
-    content.appendChild(results);
+    content.appendChild(body);
 
     panel.appendChild(header);
     panel.appendChild(content);
@@ -780,7 +870,42 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
-   * Renders the (filtered) layer results list.
+   * Groups layers by category, merging categories with fewer layers than
+   * the threshold into "Other". Returns entries sorted alphabetically
+   * with "Other" last.
+   */
+  private _groupByCategory(layers: GibsLayer[]): [string, GibsLayer[]][] {
+    const MIN_CATEGORY_SIZE = 3;
+    const all = this._capabilities?.layers ?? [];
+
+    // Count category sizes over the FULL catalog so a category does not
+    // flip into "Other" while filtering
+    const totals = new globalThis.Map<string, number>();
+    for (const layer of all) {
+      totals.set(layer.category, (totals.get(layer.category) ?? 0) + 1);
+    }
+
+    const groups = new globalThis.Map<string, GibsLayer[]>();
+    for (const layer of layers) {
+      const total = totals.get(layer.category) ?? 0;
+      const key = total >= MIN_CATEGORY_SIZE ? layer.category : "Other";
+      const group = groups.get(key);
+      if (group) {
+        group.push(layer);
+      } else {
+        groups.set(key, [layer]);
+      }
+    }
+
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      if (a === "Other") return 1;
+      if (b === "Other") return -1;
+      return a.localeCompare(b);
+    });
+  }
+
+  /**
+   * Renders the (filtered) layer catalog grouped by category.
    */
   private _renderResults(): void {
     if (!this._resultsEl || !this._metaEl) return;
@@ -791,13 +916,13 @@ export class NasaEarthdataControl implements IControl {
       return;
     }
 
-    const matches = searchLayers(this._capabilities.layers, this._state.query);
-    const visible = matches.slice(0, this._options.maxResults);
+    const query = this._state.query.trim();
+    const matches = searchLayers(this._capabilities.layers, query);
+    const groups = this._groupByCategory(matches);
 
-    this._metaEl.textContent =
-      matches.length > visible.length
-        ? `Showing ${visible.length} of ${matches.length} layers`
-        : `${matches.length} layer${matches.length === 1 ? "" : "s"}`;
+    const layerWord = matches.length === 1 ? "layer" : "layers";
+    const categoryWord = groups.length === 1 ? "category" : "categories";
+    this._metaEl.textContent = `${matches.length} ${layerWord} in ${groups.length} ${categoryWord}`;
 
     this._resultsEl.innerHTML = "";
     if (matches.length === 0) {
@@ -808,17 +933,89 @@ export class NasaEarthdataControl implements IControl {
       return;
     }
 
-    for (const layer of visible) {
-      this._resultsEl.appendChild(this._createLayerRow(layer));
+    for (const [category, layers] of groups) {
+      // While searching, auto-expand the matching categories
+      const expanded = query ? true : this._expandedCategories.has(category);
+      this._resultsEl.appendChild(
+        this._createCategoryGroup(category, layers, expanded),
+      );
     }
   }
 
   /**
-   * Creates a single layer row with title, badges, add/remove toggle,
-   * and (when added) date and opacity controls.
+   * Creates a collapsible category group with a count badge.
+   */
+  private _createCategoryGroup(
+    category: string,
+    layers: GibsLayer[],
+    expanded: boolean,
+  ): HTMLElement {
+    const group = document.createElement("div");
+    group.className = "nasa-category";
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = `nasa-category-header${expanded ? " expanded" : ""}`;
+    header.setAttribute("aria-expanded", String(expanded));
+
+    const chevron = document.createElement("span");
+    chevron.className = "nasa-category-chevron";
+    chevron.innerHTML = `
+      <svg viewBox="0 0 24 24" width="12" height="12" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 6l6 6-6 6"/>
+      </svg>
+    `;
+
+    const name = document.createElement("span");
+    name.className = "nasa-category-name";
+    name.textContent = category;
+
+    const count = document.createElement("span");
+    count.className = "nasa-category-count";
+    count.textContent = String(layers.length);
+
+    header.appendChild(chevron);
+    header.appendChild(name);
+    header.appendChild(count);
+    header.addEventListener("click", () => {
+      if (this._expandedCategories.has(category)) {
+        this._expandedCategories.delete(category);
+      } else {
+        this._expandedCategories.add(category);
+      }
+      this._renderResults();
+    });
+
+    group.appendChild(header);
+
+    if (expanded) {
+      const list = document.createElement("div");
+      list.className = "nasa-category-layers";
+      list.setAttribute("role", "list");
+
+      const visible = layers.slice(0, this._options.maxResults);
+      for (const layer of visible) {
+        list.appendChild(this._createLayerRow(layer));
+      }
+      if (layers.length > visible.length) {
+        const note = document.createElement("div");
+        note.className = "nasa-status";
+        note.textContent = `Showing ${visible.length} of ${layers.length} — refine your search`;
+        list.appendChild(note);
+      }
+
+      group.appendChild(list);
+    }
+
+    return group;
+  }
+
+  /**
+   * Creates a single catalog layer row with title, badges, and an
+   * add/remove toggle. Per-layer controls live in the added-layers section.
    */
   private _createLayerRow(layer: GibsLayer): HTMLElement {
-    const added = this._addedLayers.get(layer.id);
+    const added = this._addedLayers.has(layer.id);
 
     const row = document.createElement("div");
     row.className = `nasa-layer-row${added ? " nasa-layer-row-added" : ""}`;
@@ -872,60 +1069,215 @@ export class NasaEarthdataControl implements IControl {
     main.appendChild(actionBtn);
     row.appendChild(main);
 
-    // Controls for added layers: date picker and opacity slider
-    if (added) {
-      const controls = document.createElement("div");
-      controls.className = "nasa-layer-controls";
+    return row;
+  }
 
-      if (layer.time) {
-        const dateLabel = document.createElement("label");
-        dateLabel.className = "nasa-control-label";
-        dateLabel.textContent = "Date";
+  /**
+   * Renders the "Added layers" management section: visibility checkbox,
+   * legend toggle, remove button, opacity slider, and date picker.
+   */
+  private _renderAddedSection(): void {
+    if (!this._addedEl) return;
 
-        const dateInput = document.createElement("input");
-        dateInput.type = "date";
-        dateInput.className = "nasa-date";
-        dateInput.value = (added.date ?? layer.time.default).slice(0, 10);
-        const range = this._timeRange(layer);
-        if (range.min) dateInput.min = range.min;
-        if (range.max) dateInput.max = range.max;
-        dateInput.addEventListener("change", () => {
-          if (dateInput.value) {
-            this.setLayerDate(layer.id, dateInput.value);
-          }
-        });
+    this._addedEl.innerHTML = "";
+    if (this._addedLayers.size === 0) return;
 
-        dateLabel.appendChild(dateInput);
-        controls.appendChild(dateLabel);
-      }
+    const heading = document.createElement("div");
+    heading.className = "nasa-added-heading";
+    heading.textContent = "Added layers";
+    this._addedEl.appendChild(heading);
 
-      if (this._options.showOpacity) {
-        const opacityLabel = document.createElement("label");
-        opacityLabel.className = "nasa-control-label";
-        opacityLabel.textContent = "Opacity";
-
-        const opacityInput = document.createElement("input");
-        opacityInput.type = "range";
-        opacityInput.className = "nasa-opacity";
-        opacityInput.min = "0";
-        opacityInput.max = "1";
-        opacityInput.step = "0.05";
-        opacityInput.value = String(added.opacity);
-        opacityInput.setAttribute("aria-label", `Opacity for ${layer.title}`);
-        opacityInput.addEventListener("input", () => {
-          this.setLayerOpacity(layer.id, Number(opacityInput.value));
-        });
-
-        opacityLabel.appendChild(opacityInput);
-        controls.appendChild(opacityLabel);
-      }
-
-      if (controls.children.length > 0) {
-        row.appendChild(controls);
+    for (const added of this._addedLayers.values()) {
+      const layer = this._client.getLayer(added.id);
+      if (layer) {
+        this._addedEl.appendChild(this._createAddedRow(layer, added));
       }
     }
+  }
 
-    return row;
+  /**
+   * Creates a management card for one added layer.
+   */
+  private _createAddedRow(
+    layer: GibsLayer,
+    added: AddedLayerState,
+  ): HTMLElement {
+    const card = document.createElement("div");
+    card.className = "nasa-added-card";
+
+    // Header row: visibility checkbox, title, legend toggle, remove
+    const head = document.createElement("div");
+    head.className = "nasa-added-head";
+
+    const visLabel = document.createElement("label");
+    visLabel.className = "nasa-added-vis";
+    visLabel.title = "Toggle layer visibility";
+
+    const visCheckbox = document.createElement("input");
+    visCheckbox.type = "checkbox";
+    visCheckbox.className = "nasa-added-checkbox";
+    visCheckbox.checked = added.visible;
+    visCheckbox.setAttribute(
+      "aria-label",
+      `Toggle visibility of ${layer.title}`,
+    );
+    visCheckbox.addEventListener("change", () => {
+      this.setLayerVisibility(layer.id, visCheckbox.checked);
+    });
+
+    const titleEl = document.createElement("span");
+    titleEl.className = "nasa-added-title";
+    titleEl.textContent = layer.title;
+    titleEl.title = layer.id;
+
+    visLabel.appendChild(visCheckbox);
+    visLabel.appendChild(titleEl);
+
+    const actions = document.createElement("div");
+    actions.className = "nasa-added-actions";
+
+    if (layer.legendUrl) {
+      const legendBtn = document.createElement("button");
+      legendBtn.type = "button";
+      legendBtn.className = `nasa-icon-button${
+        this._openLegends.has(layer.id) ? " active" : ""
+      }`;
+      legendBtn.title = "Toggle legend";
+      legendBtn.setAttribute("aria-label", `Toggle legend for ${layer.title}`);
+      legendBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 6h13M8 12h13M8 18h13"/>
+          <rect x="3" y="4.5" width="3" height="3" rx="0.5"/>
+          <rect x="3" y="10.5" width="3" height="3" rx="0.5"/>
+          <rect x="3" y="16.5" width="3" height="3" rx="0.5"/>
+        </svg>
+      `;
+      legendBtn.addEventListener("click", () => {
+        if (this._openLegends.has(layer.id)) {
+          this._openLegends.delete(layer.id);
+        } else {
+          this._openLegends.add(layer.id);
+        }
+        this._renderAddedSection();
+      });
+      actions.appendChild(legendBtn);
+    }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "nasa-icon-button nasa-icon-button-danger";
+    removeBtn.title = "Remove layer";
+    removeBtn.setAttribute("aria-label", `Remove layer ${layer.title}`);
+    removeBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+        <path d="M10 11v6M14 11v6"/>
+      </svg>
+    `;
+    removeBtn.addEventListener("click", () => {
+      this.removeLayer(layer.id);
+    });
+    actions.appendChild(removeBtn);
+
+    head.appendChild(visLabel);
+    head.appendChild(actions);
+    card.appendChild(head);
+
+    // Opacity slider with live percentage readout
+    if (this._options.showOpacity) {
+      const opacityRow = document.createElement("label");
+      opacityRow.className = "nasa-control-label";
+      opacityRow.textContent = "Opacity";
+
+      const opacityInput = document.createElement("input");
+      opacityInput.type = "range";
+      opacityInput.className = "nasa-opacity";
+      opacityInput.min = "0";
+      opacityInput.max = "1";
+      opacityInput.step = "0.05";
+      opacityInput.value = String(added.opacity);
+      opacityInput.setAttribute("aria-label", `Opacity for ${layer.title}`);
+
+      const opacityValue = document.createElement("span");
+      opacityValue.className = "nasa-opacity-value";
+      opacityValue.textContent = `${Math.round(added.opacity * 100)}%`;
+
+      opacityInput.addEventListener("input", () => {
+        const value = Number(opacityInput.value);
+        this.setLayerOpacity(layer.id, value);
+        opacityValue.textContent = `${Math.round(value * 100)}%`;
+      });
+
+      opacityRow.appendChild(opacityInput);
+      opacityRow.appendChild(opacityValue);
+      card.appendChild(opacityRow);
+    }
+
+    // Date picker for time-enabled layers
+    if (layer.time) {
+      const dateLabel = document.createElement("label");
+      dateLabel.className = "nasa-control-label";
+      dateLabel.textContent = "Date";
+
+      const dateInput = document.createElement("input");
+      dateInput.type = "date";
+      dateInput.className = "nasa-date";
+      dateInput.value = (added.date ?? layer.time.default).slice(0, 10);
+      const range = this._timeRange(layer);
+      if (range.min) dateInput.min = range.min;
+      if (range.max) dateInput.max = range.max;
+      dateInput.addEventListener("change", () => {
+        if (dateInput.value) {
+          this.setLayerDate(layer.id, dateInput.value);
+        }
+      });
+
+      dateLabel.appendChild(dateInput);
+      card.appendChild(dateLabel);
+    }
+
+    // Legend image (GIBS horizontal legend SVG)
+    if (layer.legendUrl && this._openLegends.has(layer.id)) {
+      const legend = document.createElement("img");
+      legend.className = "nasa-legend-image";
+      legend.src = layer.legendUrl;
+      legend.alt = `Legend for ${layer.title}`;
+      legend.loading = "lazy";
+      card.appendChild(legend);
+    }
+
+    return card;
+  }
+
+  /**
+   * Refreshes the "Insert before" dropdown with the map's current layers.
+   */
+  private _refreshInsertOptions(): void {
+    if (!this._insertSelect || !this._map) return;
+
+    const layers = this._map.getStyle()?.layers ?? [];
+    const select = this._insertSelect;
+    select.innerHTML = "";
+
+    const topOption = document.createElement("option");
+    topOption.value = "";
+    topOption.textContent = "Top of map";
+    select.appendChild(topOption);
+
+    for (const layer of layers) {
+      const option = document.createElement("option");
+      option.value = layer.id;
+      option.textContent = layer.id;
+      select.appendChild(option);
+    }
+
+    // Restore the previous selection if the layer still exists
+    if (this._insertBefore && layers.some((l) => l.id === this._insertBefore)) {
+      select.value = this._insertBefore;
+    } else {
+      this._insertBefore = "";
+      select.value = "";
+    }
   }
 
   /**

@@ -10,8 +10,10 @@ The plugin adds a collapsible map control that fetches the GIBS WMTS capabilitie
 ## Features
 
 - **Layer Search** - Search 1,100+ NASA GIBS raster layers by title or identifier
+- **Category Browser** - Layers grouped into collapsible categories by platform/instrument (MODIS, VIIRS, MERRA2, ...)
+- **Layer Management** - Added-layers panel with visibility toggle, legend display, opacity slider, and removal
+- **Insert Before** - Choose where new layers are inserted in the map's layer stack (e.g. below labels)
 - **Time Dimension Support** - Date picker for time-enabled layers (daily/monthly imagery)
-- **Opacity Control** - Per-layer opacity slider
 - **Collapsible Control** - Compact 29x29 button that expands into a floating panel
 - **Resizable Panel** - Drag the panel edge to adjust its width in any corner
 - **Dark and Light Mode** - Follows the OS preference, or force a theme via the `theme` option
@@ -149,10 +151,11 @@ The main control class implementing MapLibre's `IControl` interface.
 
 - `getCapabilities(force?)` - Fetch and cache the GIBS layer catalog
 - `search(query)` - Search loaded layers by title or identifier
-- `addLayer(layerId, { date?, opacity?, before? })` - Add a GIBS layer to the map
+- `addLayer(layerId, { date?, opacity?, visible?, before? })` - Add a GIBS layer to the map
 - `removeLayer(layerId)` - Remove a previously added layer
 - `setLayerDate(layerId, date)` - Change the date of a time-enabled layer
 - `setLayerOpacity(layerId, opacity)` - Change a layer's opacity (0 to 1)
+- `setLayerVisibility(layerId, visible)` - Show or hide an added layer
 - `getAddedLayers()` - Get the state of all added layers
 - `toggle()` / `expand()` / `collapse()` - Control the panel
 - `getState()` / `setState(state)` - Read or reconcile the control state

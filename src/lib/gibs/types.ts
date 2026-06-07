@@ -34,6 +34,12 @@ export interface GibsLayer {
   title: string;
 
   /**
+   * Category the layer belongs to, derived from the platform/instrument
+   * prefix of the identifier (e.g. "MODIS", "VIIRS", "MERRA2").
+   */
+  category: string;
+
+  /**
    * Image format of the layer tiles.
    */
   format: GibsLayerFormat;

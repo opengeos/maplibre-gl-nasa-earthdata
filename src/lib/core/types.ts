@@ -90,6 +90,11 @@ export interface AddedLayerState {
    * Layer opacity (0 to 1)
    */
   opacity: number;
+
+  /**
+   * Whether the layer is currently visible on the map
+   */
+  visible: boolean;
 }
 
 /**

@@ -162,6 +162,8 @@ function parseLayer(
   return {
     id,
     title,
+    // Platform/instrument prefix of the identifier, used for grouping
+    category: id.split("_")[0],
     format,
     fileExtension,
     tileMatrixSet,
