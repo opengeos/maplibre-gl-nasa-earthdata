@@ -1,5 +1,5 @@
-import { PluginControl } from "./lib/core/PluginControl";
-import type { PluginState } from "./lib/core/types";
+import { NasaEarthdataControl } from "./lib/core/NasaEarthdataControl";
+import type { NasaEarthdataState } from "./lib/core/types";
 import "./lib/styles/plugin-control.css";
 
 type GeoLibreMapControlPosition =
@@ -10,10 +10,10 @@ type GeoLibreMapControlPosition =
 
 interface GeoLibreAppAPI {
   addMapControl: (
-    control: PluginControl,
+    control: NasaEarthdataControl,
     position?: GeoLibreMapControlPosition,
   ) => boolean;
-  removeMapControl: (control: PluginControl) => void;
+  removeMapControl: (control: NasaEarthdataControl) => void;
 }
 
 interface GeoLibrePlugin {
@@ -31,15 +31,15 @@ interface GeoLibrePlugin {
   applyProjectState?: (app: GeoLibreAppAPI, state: unknown) => boolean | void;
 }
 
-let control: PluginControl | null = null;
+let control: NasaEarthdataControl | null = null;
 let position: GeoLibreMapControlPosition = "top-right";
-let pendingState: Partial<PluginState> | null = null;
+let pendingState: Partial<NasaEarthdataState> | null = null;
 
-function createControl(): PluginControl {
-  const nextControl = new PluginControl({
+function createControl(): NasaEarthdataControl {
+  const nextControl = new NasaEarthdataControl({
     collapsed: pendingState?.collapsed ?? true,
-    panelWidth: pendingState?.panelWidth ?? 300,
-    title: "GeoLibre Plugin Template",
+    panelWidth: pendingState?.panelWidth ?? 320,
+    title: "NASA Earthdata",
   });
 
   if (pendingState) {
@@ -49,7 +49,7 @@ function createControl(): PluginControl {
   return nextControl;
 }
 
-function isPluginState(value: unknown): value is Partial<PluginState> {
+function isPluginState(value: unknown): value is Partial<NasaEarthdataState> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }
@@ -61,12 +61,10 @@ function isPluginState(value: unknown): value is Partial<PluginState> {
   if ("panelWidth" in candidate && typeof candidate.panelWidth !== "number") {
     return false;
   }
-  if (
-    "data" in candidate &&
-    (typeof candidate.data !== "object" ||
-      candidate.data === null ||
-      Array.isArray(candidate.data))
-  ) {
+  if ("query" in candidate && typeof candidate.query !== "string") {
+    return false;
+  }
+  if ("addedLayers" in candidate && !Array.isArray(candidate.addedLayers)) {
     return false;
   }
 
@@ -74,8 +72,8 @@ function isPluginState(value: unknown): value is Partial<PluginState> {
 }
 
 export const plugin: GeoLibrePlugin = {
-  id: "geolibre-plugin-template",
-  name: "GeoLibre Plugin Template",
+  id: "maplibre-gl-nasa-earthdata",
+  name: "NASA Earthdata",
   version: "0.1.0",
   activate(app) {
     control = control ?? createControl();

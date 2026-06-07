@@ -1,16 +1,35 @@
 // Import styles
-import './lib/styles/plugin-control.css';
+import "./lib/styles/plugin-control.css";
 
 // Main entry point - Core exports
-export { PluginControl } from './lib/core/PluginControl';
+export { NasaEarthdataControl } from "./lib/core/NasaEarthdataControl";
+
+// GIBS data layer exports
+export {
+  GibsClient,
+  DEFAULT_CAPABILITIES_URL,
+  parseCapabilities,
+  buildTileUrl,
+  searchLayers,
+} from "./lib/gibs";
 
 // Type exports
 export type {
-  PluginControlOptions,
-  PluginState,
-  PluginControlEvent,
-  PluginControlEventHandler,
-} from './lib/core/types';
+  NasaEarthdataControlOptions,
+  NasaEarthdataState,
+  AddedLayerState,
+  NasaEarthdataEvent,
+  NasaEarthdataEventPayload,
+  NasaEarthdataEventHandler,
+} from "./lib/core/types";
+export type {
+  GibsLayer,
+  GibsLayerFormat,
+  GibsTimeDimension,
+  GibsCapabilities,
+  ParseOptions,
+  GibsClientOptions,
+} from "./lib/gibs";
 
 // Utility exports
 export {
@@ -20,4 +39,4 @@ export {
   debounce,
   throttle,
   classNames,
-} from './lib/utils';
+} from "./lib/utils";

@@ -69,7 +69,7 @@ export function generateId(prefix?: string): string {
  */
 export function debounce<T extends (...args: unknown[]) => void>(
   fn: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -99,7 +99,7 @@ export function debounce<T extends (...args: unknown[]) => void>(
  */
 export function throttle<T extends (...args: unknown[]) => void>(
   fn: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle = false;
 
@@ -130,5 +130,5 @@ export function classNames(classes: Record<string, boolean>): string {
   return Object.entries(classes)
     .filter(([, value]) => value)
     .map(([key]) => key)
-    .join(' ');
+    .join(" ");
 }

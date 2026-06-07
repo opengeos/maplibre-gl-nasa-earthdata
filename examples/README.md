@@ -1,11 +1,12 @@
 # Examples
 
-This directory contains example implementations of the MapLibre GL Plugin Template.
+This directory contains example implementations of the maplibre-gl-nasa-earthdata plugin.
 
 ## Available Examples
 
 ### Basic Example
-A simple vanilla JavaScript/TypeScript example showing how to add the plugin control to a map.
+
+A simple vanilla JavaScript/TypeScript example showing how to search and add NASA GIBS layers to a map.
 
 ```bash
 # Run from project root
@@ -14,6 +15,7 @@ npm run dev
 ```
 
 ### React Example
+
 A React example demonstrating the React wrapper component and hooks.
 
 ```bash
