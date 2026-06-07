@@ -12,6 +12,12 @@ const FORMAT_MAP: Record<string, GibsLayerFormat> = {
   "application/vnd.mapbox-vector-tile": "mvt",
 };
 
+const MIME_MAP: Record<GibsLayerFormat, string> = {
+  png: "image/png",
+  jpeg: "image/jpeg",
+  mvt: "application/vnd.mapbox-vector-tile",
+};
+
 /**
  * Returns the direct child elements of a node matching a local tag name,
  * ignoring XML namespaces.
@@ -121,13 +127,21 @@ function parseLayer(
   const levelMatch = /Level(\d+)$/.exec(tileMatrixSet);
   const maxZoom = levelMatch ? parseInt(levelMatch[1], 10) : 9;
 
-  // Tile resource template. Prefer the template containing {Time} when the
-  // layer is time-enabled so dates can be substituted.
+  // Tile resource template. Only consider templates whose advertised format
+  // matches the chosen layer format, then prefer the template containing
+  // {Time} when the layer is time-enabled so dates can be substituted.
   const resourceUrls = childrenByLocalName(layerEl, "ResourceURL").filter(
     (r) => r.getAttribute("resourceType") === "tile",
   );
   if (resourceUrls.length === 0) return undefined;
-  const templates = resourceUrls
+
+  const selectedMime = MIME_MAP[format];
+  const formatMatched = resourceUrls.filter((r) => {
+    const mime = r.getAttribute("format")?.trim().toLowerCase();
+    return !mime || mime === selectedMime;
+  });
+
+  const templates = (formatMatched.length > 0 ? formatMatched : resourceUrls)
     .map((r) => r.getAttribute("template"))
     .filter((t): t is string => Boolean(t));
   if (templates.length === 0) return undefined;

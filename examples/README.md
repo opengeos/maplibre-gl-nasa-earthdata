@@ -5,6 +5,7 @@ This directory contains example implementations of the maplibre-gl-nasa-earthdat
 ## Available Examples
 
 ### Basic Example
+
 A simple vanilla JavaScript/TypeScript example showing how to search and add NASA GIBS layers to a map.
 
 ```bash
@@ -14,6 +15,7 @@ npm run dev
 ```
 
 ### React Example
+
 A React example demonstrating the React wrapper component and hooks.
 
 ```bash

@@ -42,8 +42,10 @@ describe('parseCapabilities', () => {
     const marble = layers.find((l) => l.id === 'Test_Blue_Marble')!;
     expect(temp.format).toBe('png');
     expect(temp.fileExtension).toBe('png');
+    expect(temp.resourceTemplate).toMatch(/\.png$/i);
     expect(marble.format).toBe('jpeg');
     expect(marble.fileExtension).toBe('jpg');
+    expect(marble.resourceTemplate).toMatch(/\.jpe?g$/i);
   });
 
   it('parses the time dimension with default and values', () => {

@@ -231,7 +231,25 @@ export class NasaEarthdataControl implements IControl {
     }
 
     if (newState.addedLayers) {
-      this._reconcileAddedLayers(newState.addedLayers);
+      // Reconciliation needs the layer catalog; defer it until the
+      // capabilities are loaded so state restoration works before the
+      // panel is first expanded.
+      const desired = newState.addedLayers.map((l) => ({ ...l }));
+      if (this._capabilities) {
+        this._reconcileAddedLayers(desired);
+      } else {
+        void this.getCapabilities()
+          .then(() => {
+            this._reconcileAddedLayers(desired);
+            this._renderResults();
+            this._emit("statechange");
+          })
+          .catch((error: unknown) => {
+            const err =
+              error instanceof Error ? error : new Error(String(error));
+            this._emitError(err);
+          });
+      }
     }
 
     this._emit("statechange");

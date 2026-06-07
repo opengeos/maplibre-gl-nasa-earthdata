@@ -36,6 +36,9 @@
         <TileMatrixSet>GoogleMapsCompatible_Level9</TileMatrixSet>
       </TileMatrixSetLink>
       <Format>image/png</Format>
+      <Format>application/vnd.mapbox-vector-tile</Format>
+      <ResourceURL resourceType="tile" format="application/vnd.mapbox-vector-tile"
+        template="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Test_Air_Temperature_Monthly/default/{Time}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.mvt"/>
       <ResourceURL resourceType="tile" format="image/png"
         template="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Test_Air_Temperature_Monthly/default/{Time}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png"/>
       <ResourceURL resourceType="tile" format="image/png"

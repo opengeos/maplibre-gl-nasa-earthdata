@@ -5,7 +5,7 @@ A [MapLibre GL JS](https://maplibre.org/) plugin for searching and adding [NASA 
 [![npm version](https://img.shields.io/npm/v/maplibre-gl-nasa-earthdata.svg)](https://www.npmjs.com/package/maplibre-gl-nasa-earthdata)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-The plugin adds a collapsible map control that fetches the GIBS WMTS capabilities document (1,200+ layers), lets users search the catalog by name, and add raster imagery layers to the map with per-layer date and opacity controls.
+The plugin adds a collapsible map control that fetches the GIBS WMTS capabilities document, lets users search the catalog of 1,100+ raster layers by name, and add imagery layers to the map with per-layer date and opacity controls.
 
 ## Features
 
@@ -331,7 +331,7 @@ docker run -p 8080:80 maplibre-gl-nasa-earthdata
 
 ## Attribution
 
-Imagery provided by services from NASA's [Global Imagery Browse Services (GIBS)](https://earthdata.nasa.gov/gibs), part of NASA's Earth Science Data and Information System (ESDIS). The plugin applies a NASA EOSDIS GIBS attribution to added raster sources by default.
+Imagery provided by services from NASA's [Global Imagery Browse Services (GIBS)](https://earthdata.nasa.gov/gibs), part of NASA's Earth Observing System Data and Information System (EOSDIS). The plugin applies a NASA EOSDIS GIBS attribution to added raster sources by default.
 
 ## License
 
