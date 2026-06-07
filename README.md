@@ -142,7 +142,6 @@ The main control class implementing MapLibre's `IControl` interface.
 | `className`       | `string`                        | `''`                   | Custom CSS class name                                                     |
 | `capabilitiesUrl` | `string`                        | GIBS EPSG:3857 best    | URL of the WMTS capabilities document                                     |
 | `includeVector`   | `boolean`                       | `false`                | Include vector-tile (MVT) layers in search results                        |
-| `maxResults`      | `number`                        | `50`                   | Maximum number of layers rendered in the results list                     |
 | `showOpacity`     | `boolean`                       | `true`                 | Show an opacity slider for added layers                                   |
 | `attribution`     | `string`                        | NASA EOSDIS GIBS link  | Attribution applied to added raster sources                               |
 | `theme`           | `'auto' \| 'light' \| 'dark'`   | `'auto'`               | Color theme; `'auto'` follows the OS preference                           |

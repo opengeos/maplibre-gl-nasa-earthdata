@@ -28,7 +28,6 @@ const DEFAULT_OPTIONS: Required<NasaEarthdataControlOptions> = {
   className: "",
   capabilitiesUrl: DEFAULT_CAPABILITIES_URL,
   includeVector: false,
-  maxResults: 50,
   showOpacity: true,
   attribution:
     '<a href="https://earthdata.nasa.gov/gibs" target="_blank">NASA EOSDIS GIBS</a>',
@@ -244,9 +243,9 @@ export class NasaEarthdataControl implements IControl {
     if (newState.addedLayers) {
       // Reconciliation needs the layer catalog; defer it until the
       // capabilities are loaded so state restoration works before the
-      // panel is first expanded.
+      // panel is first expanded. An empty list needs no catalog data.
       const desired = newState.addedLayers.map((l) => ({ ...l }));
-      if (this._capabilities) {
+      if (desired.length === 0 || this._capabilities) {
         this._reconcileAddedLayers(desired);
       } else {
         // Emit statechange only after reconciliation so listeners never
@@ -850,6 +849,30 @@ export class NasaEarthdataControl implements IControl {
   }
 
   /**
+   * Returns the maximum panel width that fits the map container.
+   */
+  private _maxPanelWidth(): number {
+    return Math.max(
+      240,
+      (this._mapContainer?.getBoundingClientRect().width ?? window.innerWidth) -
+        20,
+    );
+  }
+
+  /**
+   * Clamps the panel width to the map container. Applied whenever the panel
+   * is (re)positioned so a saved width survives map shrinking.
+   */
+  private _applyPanelWidthBounds(): void {
+    if (!this._panel) return;
+    const width = Math.round(
+      clamp(this._state.panelWidth, 240, this._maxPanelWidth()),
+    );
+    this._state.panelWidth = width;
+    this._panel.style.width = `${width}px`;
+  }
+
+  /**
    * Starts a panel width drag-resize. The drag direction is derived from
    * the control corner so resizing works whether the panel is anchored to
    * the left or the right edge of the map.
@@ -862,11 +885,7 @@ export class NasaEarthdataControl implements IControl {
     const startWidth = this._panel.getBoundingClientRect().width;
     // Right-anchored panels grow leftward, so invert the pointer delta
     const anchoredRight = !this._getControlPosition().endsWith("left");
-    const maxWidth = Math.max(
-      240,
-      (this._mapContainer?.getBoundingClientRect().width ?? window.innerWidth) -
-        20,
-    );
+    const maxWidth = this._maxPanelWidth();
 
     const onMove = (ev: PointerEvent) => {
       const delta = anchoredRight ? startX - ev.clientX : ev.clientX - startX;
@@ -1031,15 +1050,8 @@ export class NasaEarthdataControl implements IControl {
       list.className = "nasa-category-layers";
       list.setAttribute("role", "list");
 
-      const visible = layers.slice(0, this._options.maxResults);
-      for (const layer of visible) {
+      for (const layer of layers) {
         list.appendChild(this._createLayerRow(layer));
-      }
-      if (layers.length > visible.length) {
-        const note = document.createElement("div");
-        note.className = "nasa-status";
-        note.textContent = `Showing ${visible.length} of ${layers.length} — refine your search`;
-        list.appendChild(note);
       }
 
       group.appendChild(list);
@@ -1443,6 +1455,9 @@ export class NasaEarthdataControl implements IControl {
     // Get the toggle button (first child of container)
     const button = this._container.querySelector(".plugin-control-toggle");
     if (!button) return;
+
+    // Keep the panel within the map even if it shrank since the width was set
+    this._applyPanelWidthBounds();
 
     const buttonRect = button.getBoundingClientRect();
     const mapRect = this._mapContainer.getBoundingClientRect();

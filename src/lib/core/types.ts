@@ -48,12 +48,6 @@ export interface NasaEarthdataControlOptions {
   includeVector?: boolean;
 
   /**
-   * Maximum number of layers rendered in the results list
-   * @default 50
-   */
-  maxResults?: number;
-
-  /**
    * Whether to show an opacity slider for added layers
    * @default true
    */
