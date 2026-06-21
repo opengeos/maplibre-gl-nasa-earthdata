@@ -737,17 +737,17 @@ export class NasaEarthdataControl implements IControl {
     toggleBtn.className = "plugin-control-toggle";
     toggleBtn.type = "button";
     toggleBtn.setAttribute("aria-label", this._options.title);
-    // Satellite icon. A distinct, recognizable mark for NASA Earthdata's
-    // satellite imagery that avoids colliding with the generic globe icon used
-    // by core map functionality in host apps.
+    // Satellite-dish icon. A distinct, recognizable mark for NASA Earthdata's
+    // ground-station data access that avoids colliding with the generic globe
+    // icon used by core map functionality in host apps, and with the satellite
+    // icon used by the sibling NASA OPERA control.
     toggleBtn.innerHTML = `
       <span class="plugin-control-icon">
         <svg viewBox="0 0 24 24" width="22" height="22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13 7 9 3 5 7l4 4"/>
-          <path d="m17 11 4 4-4 4-4-4"/>
-          <path d="m8 12 4 4 6-6-4-4Z"/>
-          <path d="m16 8 3-3"/>
-          <path d="M9 21a6 6 0 0 0-6-6"/>
+          <path d="M4 10a7.31 7.31 0 0 0 10 10Z"/>
+          <path d="m9 15 3-3"/>
+          <path d="M17 13a6 6 0 0 0-6-6"/>
+          <path d="M21 13A10 10 0 0 0 11 3"/>
         </svg>
       </span>
     `;
