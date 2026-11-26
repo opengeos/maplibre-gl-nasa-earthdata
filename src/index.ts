@@ -11,6 +11,12 @@ export {
   parseCapabilities,
   buildTileUrl,
   searchLayers,
+  previousGibsDates,
+  gibsProbeTileUrl,
+  findGibsFallbackDate,
+  fetchWithTimeout,
+  DEFAULT_FALLBACK_MAX_STEPS,
+  DEFAULT_PROBE_TIMEOUT_MS,
 } from "./lib/gibs";
 
 // Type exports
@@ -21,6 +27,7 @@ export type {
   NasaEarthdataEvent,
   NasaEarthdataEventPayload,
   NasaEarthdataEventHandler,
+  DefaultDateFallbackOptions,
 } from "./lib/core/types";
 export type {
   GibsLayer,
@@ -29,6 +36,7 @@ export type {
   GibsCapabilities,
   ParseOptions,
   GibsClientOptions,
+  ProbeFetch,
 } from "./lib/gibs";
 
 // Utility exports
