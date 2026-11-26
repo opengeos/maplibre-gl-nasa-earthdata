@@ -83,8 +83,10 @@ function gridDateBefore(
 /**
  * Lists the dates of a GIBS time domain that come before `from`, newest first.
  *
- * Steps back along the period grid of the interval `from` falls in, then
- * continues at the end of the previous interval. Only date-only (`YYYY-MM-DD`)
+ * Each step takes the newest advertised date before the current one: a date
+ * on the period grid of an interval that contains it, or the end of an
+ * interval that lies wholly before it (overlapping intervals are all
+ * considered). Only date-only (`YYYY-MM-DD`)
  * domains are handled; sub-daily domains return no dates.
  *
  * @param time - The layer's time dimension from the capabilities document.
@@ -104,17 +106,22 @@ export function previousGibsDates(
   const dates: string[] = [];
   let current = from;
   while (dates.length < count) {
-    const containing = intervals.find(
-      (interval) => interval.start <= current && current <= interval.end,
-    );
-    const next =
-      gridDateBefore(containing, current) ??
-      // Continue at the newest interval end before the current date.
-      intervals
-        .map((interval) => interval.end)
-        .filter((end) => end < current)
-        .sort()
-        .pop();
+    // The newest advertised date before `current` across every interval:
+    // the end of an interval that is wholly earlier, or the grid date before
+    // `current` of an interval that contains it. Overlapping intervals can
+    // each offer one, and the newest wins.
+    let next: string | undefined;
+    for (const interval of intervals) {
+      const candidate =
+        interval.end < current
+          ? interval.end
+          : interval.start <= current
+            ? gridDateBefore(interval, current)
+            : undefined;
+      if (candidate !== undefined && (next === undefined || candidate > next)) {
+        next = candidate;
+      }
+    }
     if (!next) break;
     dates.push(next);
     current = next;

@@ -172,6 +172,20 @@ describe("default-date fallback", () => {
     expect(addedDates(control)).toEqual(["2026-02-01"]);
   });
 
+  it("keeps the insertion target chosen at click time", async () => {
+    const { fetch } = probe(() => 200);
+    const { control, map } = await makeControl({
+      defaultDateFallback: { fetch },
+    });
+    const internals = control as unknown as { _insertBefore: string };
+    internals._insertBefore = "";
+    panelAdd(control, MONTHLY);
+    internals._insertBefore = "some-layer";
+    await settle();
+    expect(map.addLayer).toHaveBeenCalledWith(expect.anything(), undefined);
+    expect(map.getLayer).not.toHaveBeenCalledWith("some-layer");
+  });
+
   it("adds at the default date at once when the option is false", async () => {
     const { control } = await makeControl({ defaultDateFallback: false });
     const fetchSpy = globalThis.fetch as ReturnType<typeof vi.fn>;

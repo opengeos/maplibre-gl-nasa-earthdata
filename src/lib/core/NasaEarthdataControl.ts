@@ -563,7 +563,10 @@ export class NasaEarthdataControl implements IControl {
       return;
     }
     // The add now runs after the click handler returned, so surface errors.
-    this.addLayerAtAvailableDate(layerId).catch((error: unknown) =>
+    // Capture the insertion target now: the user may change it mid-probe.
+    this.addLayerAtAvailableDate(layerId, {
+      before: this._insertBefore,
+    }).catch((error: unknown) =>
       this._emitError(error instanceof Error ? error : new Error(String(error))),
     );
   }

@@ -111,15 +111,17 @@ describe("previousGibsDates", () => {
 
   it("keeps the period grid when the date to step from is off it", () => {
     // 2024-03-20 is not on the 12-day grid from 2024-02-25 (or the 8-day one
-    // from 2024-02-09), so each step still lands on its interval's own grid.
+    // from 2024-02-09), so each step still lands on an interval's own grid.
+    // The intervals overlap: the newest advertised date of either wins, so the
+    // first interval's end (2024-03-12) comes before the second's 2024-03-08.
     const time = {
       default: "2024-03-20",
       values: ["2024-02-09/2024-03-12/P8D", "2024-02-25/2024-03-20/P12D"],
     };
     assert.deepEqual(previousGibsDates(time, "2024-03-20", 3), [
+      "2024-03-12",
       "2024-03-08",
       "2024-03-04",
-      "2024-02-25",
     ]);
   });
 
