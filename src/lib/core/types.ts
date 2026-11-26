@@ -1,4 +1,5 @@
 import type { Map } from "maplibre-gl";
+import type { ProbeFetch } from "../gibs/dateFallback";
 import type { GibsLayer } from "../gibs/types";
 
 /**
@@ -64,6 +65,46 @@ export interface NasaEarthdataControlOptions {
    * @default 'auto'
    */
   theme?: "auto" | "light" | "dark";
+
+  /**
+   * Whether the panel's Add button checks that a time-enabled layer has
+   * imagery at its default date. GIBS sometimes advertises a default date
+   * with no tiles behind it, so the layer would draw nothing. When enabled,
+   * the Add probes the zoom-0 tile at the default date and, if it is missing
+   * (HTTP 404 or 204), adds the layer at the newest earlier date in its time
+   * domain that has imagery instead. Any other answer (a network error, a
+   * timeout, a 5xx) keeps the default date. Pass an object to tune the probe.
+   *
+   * Programmatic {@link NasaEarthdataControl.addLayer} calls are never
+   * probed; use {@link NasaEarthdataControl.addLayerAtAvailableDate} for that.
+   * @default true
+   */
+  defaultDateFallback?: boolean | DefaultDateFallbackOptions;
+}
+
+/**
+ * Tuning for the default-date fallback (see
+ * {@link NasaEarthdataControlOptions.defaultDateFallback}).
+ */
+export interface DefaultDateFallbackOptions {
+  /**
+   * How many earlier dates to try after the default date is found missing.
+   * @default 3
+   */
+  maxSteps?: number;
+
+  /**
+   * How long one tile probe may take, in milliseconds, before it is abandoned
+   * (and the default date kept). Ignored when `fetch` is given.
+   * @default 5000
+   */
+  timeoutMs?: number;
+
+  /**
+   * The fetch used for the probes. Only the response status is read.
+   * @default fetch with a `timeoutMs` abort
+   */
+  fetch?: ProbeFetch;
 }
 
 /**

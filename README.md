@@ -145,12 +145,15 @@ The main control class implementing MapLibre's `IControl` interface.
 | `showOpacity`     | `boolean`                       | `true`                 | Show an opacity slider for added layers                                   |
 | `attribution`     | `string`                        | NASA EOSDIS GIBS link  | Attribution applied to added raster sources                               |
 | `theme`           | `'auto' \| 'light' \| 'dark'`   | `'auto'`               | Color theme; `'auto'` follows the OS preference                           |
+| `defaultDateFallback` | `boolean \| { maxSteps?, timeoutMs?, fetch? }` | `true` | Panel Add checks a time-enabled layer has imagery at its default date and falls back to the newest earlier date that does (see below) |
 
 #### Methods
 
 - `getCapabilities(force?)` - Fetch and cache the GIBS layer catalog
 - `search(query)` - Search loaded layers by title or identifier
 - `addLayer(layerId, { date?, opacity?, visible?, before? })` - Add a GIBS layer to the map. Time-enabled layers can be added multiple times with different dates; each addition is an instance with a unique `key` (see `AddedLayerState`)
+- `addLayerAtAvailableDate(layerId, options?)` - Like `addLayer`, but for a time-enabled layer added without a `date` or `key`, first probes its default date and falls back to the newest earlier date with imagery (see below). Returns a promise that settles once the layer was added
+- `getPanelElement()` - The floating panel element (after `onAdd`), for hosts that dock it elsewhere
 - `removeLayer(keyOrId)` - Remove an instance by key, or all instances of a layer by its GIBS identifier
 - `setLayerDate(keyOrId, date)` - Change the date of a time-enabled layer instance
 - `setLayerOpacity(keyOrId, opacity)` - Change an instance's opacity (0 to 1)
@@ -160,6 +163,12 @@ The main control class implementing MapLibre's `IControl` interface.
 - `getState()` / `setState(state)` - Read or reconcile the control state
 - `on(event, handler)` / `off(event, handler)` - Manage event handlers
 - `getMap()` / `getContainer()` - Access the map instance and container element
+
+#### Default-date fallback
+
+GIBS sometimes advertises a default (latest) date in its capabilities that has no imagery behind it, so a layer added at that date draws nothing. With `defaultDateFallback` enabled (the default), the panel's Add button first requests the layer's zoom-0 tile at the default date. If it is missing (HTTP 404 or 204), it tries up to `maxSteps` (default 3) earlier dates of the layer's time domain and adds the layer at the newest one with imagery. Any other answer (a network error, a timeout after `timeoutMs`, default 5000, or a 5xx) keeps the default date. A default date that works costs one tile request. Only date-only (`YYYY-MM-DD`) time domains are stepped.
+
+Programmatic `addLayer()` calls are never probed, so they stay synchronous; call `addLayerAtAvailableDate()` to get the same behavior from code. Set `defaultDateFallback: false` to add panel layers at the advertised default date immediately. Pass `fetch` to route the probes through your own HTTP client (only the response `status` is read).
 
 #### Events
 
@@ -210,6 +219,10 @@ Lower-level building blocks are exported for advanced use:
 - `buildTileUrl(layer, time?)` - Build an XYZ tile URL template for a layer
 - `searchLayers(layers, query)` - Filter layers by title or identifier
 - `DEFAULT_CAPABILITIES_URL` - The default GIBS capabilities URL
+- `previousGibsDates(time, from, count)` - The dates of a time domain before `from`, newest first
+- `findGibsFallbackDate(layer, fetch, maxSteps?)` - The newest date before the default with imagery, or `null` when the default works or the probe cannot tell
+- `gibsProbeTileUrl(layer, date)` - The zoom-0 tile URL of a layer at a date
+- `fetchWithTimeout(timeoutMs?, fetch?)` - A probe fetch that aborts slow requests
 
 ### Exported Types
 

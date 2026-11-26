@@ -6,6 +6,12 @@ import type {
 import { GibsClient, DEFAULT_CAPABILITIES_URL } from "../gibs/GibsClient";
 import { buildTileUrl } from "../gibs/tileUrl";
 import { searchLayers } from "../gibs/search";
+import {
+  DEFAULT_FALLBACK_MAX_STEPS,
+  DEFAULT_PROBE_TIMEOUT_MS,
+  fetchWithTimeout,
+  findGibsFallbackDate,
+} from "../gibs/dateFallback";
 import type { GibsCapabilities, GibsLayer } from "../gibs/types";
 import { clamp, debounce } from "../utils";
 import type {
@@ -15,6 +21,7 @@ import type {
   NasaEarthdataEventHandler,
   NasaEarthdataEventPayload,
   AddedLayerState,
+  DefaultDateFallbackOptions,
 } from "./types";
 
 /**
@@ -32,6 +39,7 @@ const DEFAULT_OPTIONS: Required<NasaEarthdataControlOptions> = {
   attribution:
     '<a href="https://earthdata.nasa.gov/gibs" target="_blank">NASA EOSDIS GIBS</a>',
   theme: "auto",
+  defaultDateFallback: true,
 };
 
 /**
@@ -79,6 +87,13 @@ export class NasaEarthdataControl implements IControl {
   private _loading = false;
   private _addedLayers: globalThis.Map<string, AddedLayerState> =
     new globalThis.Map();
+  // Layers whose default-date probe is still running. A repeat add at the
+  // same date gets its own "#2" instance, so a second click while the first
+  // one is probing would otherwise add a duplicate once both probes settle.
+  private _probing = new Set<string>();
+  // Bumped on every removal from a map, so a probe that settles afterwards
+  // can tell its map is gone (even if the control was added to another one).
+  private _mountGeneration = 0;
 
   // Panel content elements
   private _searchInput?: HTMLInputElement;
@@ -153,6 +168,8 @@ export class NasaEarthdataControl implements IControl {
    * Implements the IControl interface.
    */
   onRemove(): void {
+    this._mountGeneration++;
+    this._probing.clear();
     // Remove all added GIBS layers and sources from the map
     for (const layerId of Array.from(this._addedLayers.keys())) {
       this._removeMapLayer(layerId);
@@ -464,6 +481,94 @@ export class NasaEarthdataControl implements IControl {
     this._refreshInsertOptions();
     this._emit("layeradd", { layer });
     this._emit("statechange");
+  }
+
+  /**
+   * Adds a GIBS layer like {@link addLayer}, but first checks that a
+   * time-enabled layer has imagery at its default date. GIBS sometimes
+   * advertises a default date with no tiles behind it; when the zoom-0 tile at
+   * that date is missing (HTTP 404 or 204), the layer is added at the newest
+   * earlier date of its time domain that has imagery. A default date that
+   * works costs one tile request. Any other probe answer (a network error, a
+   * timeout, a 5xx) keeps the default date.
+   *
+   * Calls that name a `date` or a `key`, and layers without a time dimension,
+   * are added at once with no probe. A second call for a layer whose probe is
+   * still running is ignored, and nothing is added if the control is removed
+   * from the map before the probe settles. Probing uses the
+   * `defaultDateFallback` option's tuning even when the option is `false`.
+   *
+   * @param layerId - The GIBS layer identifier
+   * @param options - The same options as {@link addLayer}
+   * @returns Resolves once the layer was added (or skipped)
+   */
+  async addLayerAtAvailableDate(
+    layerId: string,
+    options?: Parameters<NasaEarthdataControl["addLayer"]>[1],
+  ): Promise<void> {
+    const layer =
+      options?.date === undefined && options?.key === undefined
+        ? this._client.getLayer(layerId)
+        : undefined;
+    if (!layer?.time) {
+      this.addLayer(layerId, options);
+      return;
+    }
+    if (this._probing.has(layerId)) return;
+    this._probing.add(layerId);
+    const generation = this._mountGeneration;
+    const tuning = this._fallbackOptions();
+    let date: string | null;
+    try {
+      date = await findGibsFallbackDate(
+        layer,
+        tuning.fetch ??
+          fetchWithTimeout(tuning.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS),
+        tuning.maxSteps ?? DEFAULT_FALLBACK_MAX_STEPS,
+      );
+    } catch {
+      // An unexpected failure must not swallow the add: use the default date.
+      date = null;
+    } finally {
+      if (generation === this._mountGeneration) this._probing.delete(layerId);
+    }
+    if (generation !== this._mountGeneration) return;
+    this.addLayer(layerId, date ? { ...options, date } : options);
+  }
+
+  /**
+   * Returns the floating panel element, once the control has been added to a
+   * map. Host applications that dock the panel elsewhere (moving it out of
+   * the map container) can use this rather than searching the DOM.
+   *
+   * @returns The panel element, or undefined before `onAdd` / after `onRemove`
+   */
+  getPanelElement(): HTMLElement | undefined {
+    return this._panel;
+  }
+
+  /** The default-date fallback tuning, whether or not the option is enabled. */
+  private _fallbackOptions(): DefaultDateFallbackOptions {
+    const option = this._options.defaultDateFallback;
+    return typeof option === "object" && option !== null ? option : {};
+  }
+
+  /**
+   * Adds a layer from the panel's Add button, probing its default date when
+   * the `defaultDateFallback` option is enabled.
+   */
+  private _addFromPanel(layerId: string): void {
+    if (this._options.defaultDateFallback === false) {
+      this.addLayer(layerId);
+      return;
+    }
+    // The add now runs after the click handler returned, so surface errors.
+    // Capture the insertion target now: the user may change it mid-probe.
+    this.addLayerAtAvailableDate(layerId, {
+      before: this._insertBefore,
+    }).catch((error: unknown) =>
+      this._emitError(error instanceof Error ? error : new Error(String(error))),
+    );
   }
 
   /**
@@ -1149,7 +1254,7 @@ export class NasaEarthdataControl implements IControl {
       if (!layer.time && this._resolveInstances(layer.id).length > 0) {
         this.removeLayer(layer.id);
       } else {
-        this.addLayer(layer.id);
+        this._addFromPanel(layer.id);
       }
     });
 
